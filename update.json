@@ -1,9 +1,9 @@
 {
   "camera": {
-    "versionName": "1.8",
-    "versionCode": 72,
-    "apkUrl": "https://github.com/ffast112-ff/cam112/releases/download/v1.8-g1.5/FieldCamera-1.8-release.apk",
-    "sha256": "aaff1cb2c05d34eb9d9de5e2321a908b0a47e0c3197cb64f7780493ef830a9eb"
+    "versionName": "1.9",
+    "versionCode": 73,
+    "apkUrl": "https://github.com/ffast112-ff/cam112/releases/download/v1.9-camera/FieldCamera-1.9-release.apk",
+    "sha256": "9a3b7ea05f1e094b5c71e426feef418362368e52340b9aad7c84f32350da33e1"
   },
   "gallery": {
     "versionName": "1.5",
