@@ -1,1 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>현장카메라 다운로드</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #0d0e10;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont,
+                     "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    .wrap {
+        width: 100%;
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 46px 20px 40px;
+    }
+
+    .title {
+        font-size: 27px;
+        font-weight: 800;
+        margin-bottom: 7px;
+    }
+
+    .subtitle {
+        color: #9ca3af;
+        font-size: 14px;
+        margin-bottom: 34px;
+    }
+
+    .card {
+        background: #17191d;
+        border: 1px solid #2b2e34;
+        border-radius: 18px;
+        padding: 22px;
+        margin-bottom: 18px;
+    }
+
+    .app-name {
+        font-size: 21px;
+        font-weight: 750;
+    }
+
+    .version {
+        margin-top: 7px;
+        color: #9ca3af;
+        font-size: 13px;
+    }
+
+    .download {
+        display: block;
+        width: 100%;
+        margin-top: 20px;
+        padding: 15px 12px;
+
+        background: #ffffff;
+        color: #111111;
+
+        text-align: center;
+        text-decoration: none;
+        font-size: 16px;
+        font-weight: 750;
+
+        border-radius: 12px;
+    }
+
+    .download.disabled {
+        pointer-events: none;
+        opacity: 0.45;
+    }
+
+    .info {
+        margin-top: 30px;
+        color: #7f858d;
+        font-size: 12px;
+        line-height: 1.7;
+        text-align: center;
+    }
+
+    .error {
+        display: none;
+        margin-top: 20px;
+        color: #ff7777;
+        font-size: 13px;
+        text-align: center;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+    <div class="title">현장카메라</div>
+
+    <div class="subtitle">
+        최신 버전 설치파일 다운로드
+    </div>
+
+
+    <div class="card">
+
+        <div class="app-name">
+            현장카메라
+        </div>
+
+        <div class="version" id="cameraVersion">
+            최신 버전 확인 중...
+        </div>
+
+        <a
+            id="cameraDownload"
+            class="download disabled"
+            href="#">
+            다운로드
+        </a>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="app-name">
+            현장사진첩
+        </div>
+
+        <div class="version" id="galleryVersion">
+            최신 버전 확인 중...
+        </div>
+
+        <a
+            id="galleryDownload"
+            class="download disabled"
+            href="#">
+            다운로드
+        </a>
+
+    </div>
+
+
+    <div id="errorText" class="error">
+        최신 버전 정보를 불러오지 못했습니다.
+    </div>
+
+
+    <div class="info">
+        기존 앱이 설치되어 있는 경우<br>
+        앱에서 새 버전을 확인하여 업데이트할 수 있습니다.
+    </div>
+
+</div>
+
+
+<script>
+async function loadLatestVersions() {
+
+    try {
+
+        const response =
+            await fetch(
+                "./update.json?t=" + Date.now(),
+                {
+                    cache: "no-store"
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error("update.json error");
+        }
+
+        const data =
+            await response.json();
+
+
+        /* 현장카메라 */
+
+        document
+            .getElementById("cameraVersion")
+            .textContent =
+                "최신 버전 " +
+                data.camera.versionName;
+
+        const cameraButton =
+            document.getElementById(
+                "cameraDownload"
+            );
+
+        cameraButton.href =
+            data.camera.apkUrl;
+
+        cameraButton.classList.remove(
+            "disabled"
+        );
+
+
+        /* 현장사진첩 */
+
+        document
+            .getElementById("galleryVersion")
+            .textContent =
+                "최신 버전 " +
+                data.gallery.versionName;
+
+        const galleryButton =
+            document.getElementById(
+                "galleryDownload"
+            );
+
+        galleryButton.href =
+            data.gallery.apkUrl;
+
+        galleryButton.classList.remove(
+            "disabled"
+        );
+
+
+    } catch (error) {
+
+        document
+            .getElementById("errorText")
+            .style.display =
+                "block";
+    }
+}
+
+
+loadLatestVersions();
+</script>
+
+</body>
+</html>
