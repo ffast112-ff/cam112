@@ -2,13 +2,13 @@
   "camera": {
     "versionName": "1.2",
     "versionCode": 66,
-    "apkUrl": "https://chosen-huntress-undamaged.ngrok-free.dev/FieldCamera-1.2-release.apk",
+    "apkUrl": "https://github.com/ffast112-ff/cam112/releases/download/v1.2/FieldCamera-1.2-release.apk",
     "sha256": "13dff9692ff38b14386200ed07d06d5a91a1aa56eccd025e9d8bfff600c02305"
   },
   "gallery": {
     "versionName": "1.2",
     "versionCode": 17,
-    "apkUrl": "https://chosen-huntress-undamaged.ngrok-free.dev/FieldGallery-1.2-release.apk",
+    "apkUrl": "https://github.com/ffast112-ff/cam112/releases/download/v1.2/FieldGallery-1.2-release.apk",
     "sha256": "29a34673bf726dd929dbdb4d363d6acc0c7809f2310bf1e425f8e4d191545253"
   }
 }
