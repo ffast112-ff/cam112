@@ -1,7 +1,7 @@
 {
-  "versionCode": 32,
-  "versionName": "2.12",
-  "apkUrl": "https://github.com/ffast112-ff/cam112/releases/download/memory-v2.12/MyMemoryCuration.apk",
-  "notes": "나의 추억 2.12 업데이트 및 안정화",
-  "sha256": "97f2711d222dbc44786a40be9555540846a7ea73246f4dde8ed5e936fff9bfc7"
+  "versionCode": 33,
+  "versionName": "2.13",
+  "apkUrl": "https://github.com/ffast112-ff/cam112/releases/download/memory-v2.13/MyMemoryCuration.apk",
+  "notes": "나의 추억 2.13 업데이트 및 안정화",
+  "sha256": "e8bfbdcda6b2ca24f3dfb1e15b5de8a6bcb7f6a3bcf211336297b7be4de62613"
 }
