@@ -1,7 +1,7 @@
 {
-  "versionCode": 110,
-  "versionName": "2.29",
-  "apkUrl": "https://github.com/ffast112-ff/memory112/releases/download/v2.29/MyMemoryCuration.apk",
-  "notes": "나의 추억 2.29 · v3.1 구조개편 완료, SAF·EXIF/GPS·앨범 저장소 구조 안정화",
-  "sha256": "20b1ceff1271653fce04a5a54bb361c5288d45a17c1fa7bc04e3dbbd4eb216fd"
+  "versionCode": 111,
+  "versionName": "2.30",
+  "apkUrl": "https://github.com/ffast112-ff/memory112/releases/download/v2.30/MyMemoryCuration.apk",
+  "notes": "나의 추억 2.30 · v3.1 구조개편 완료, SAF·EXIF/GPS·앨범 저장소 구조 안정화",
+  "sha256": "e453394f64d4d8657edebcf87b8058326ec6462762175916c2a0b56cfc68da68"
 }
