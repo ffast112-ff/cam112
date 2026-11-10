@@ -6,6 +6,8 @@ on:
       - "fitplan/app/**"
       - "fitplan/source.zip"
   workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
 
 permissions:
   contents: write
@@ -19,20 +21,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Skip versions already published
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python -c "import json;print(json.load(open('fitplan/version.json'))['version'])")
+          if gh release view "fitplan-v$version" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "FitPlan $version already published; nothing to do"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-python@v5
+        if: steps.existing.outputs.skip != 'true'
         with:
           python-version: '3.11'
       - name: Install build dependency
+        if: steps.existing.outputs.skip != 'true'
         run: python -m pip install 'cryptography>=43,<48'
       - name: Restore initial FitPlan source archive
+        if: steps.existing.outputs.skip != 'true'
         run: |
           if [ ! -f fitplan/app/build_apk.py ] && [ -f fitplan/source.zip ]; then
             mkdir -p fitplan/app
             python -m zipfile -e fitplan/source.zip fitplan/app
           fi
       - name: Apply Android system back navigation patch
+        if: steps.existing.outputs.skip != 'true'
         run: python fitplan/patch_android_back.py
       - name: Verify source and signing secrets
+        if: steps.existing.outputs.skip != 'true'
         env:
           SIGNING_KEY: ${{ secrets.FITPLAN_SIGNING_KEY_PEM_B64 }}
           SIGNING_CERT: ${{ secrets.FITPLAN_SIGNING_CERT_DER_B64 }}
@@ -45,6 +64,7 @@ jobs:
           printf '%s' "$SIGNING_CERT" | base64 -d > /tmp/fitplan-signing/cert.der
           chmod 600 /tmp/fitplan-signing/key.pem
       - name: Verify signature identity and build APK
+        if: steps.existing.outputs.skip != 'true'
         id: build
         env:
           FITPLAN_OUTPUT: ${{ runner.temp }}/FitPlan-release.apk
@@ -96,6 +116,7 @@ jobs:
           PY
           rm -f fitplan/app/fitplan_signing_private_key.pem fitplan/app/fitplan_signing_certificate.der
       - name: Publish FitPlan release
+        if: steps.existing.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.build.outputs.version }}
@@ -111,6 +132,7 @@ jobs:
           fi
           gh release create "$tag" "$APK_NAME" --title "FitPlan $VERSION" --notes "FitPlan Android update $VERSION"
       - name: Update application version manifest
+        if: steps.existing.outputs.skip != 'true'
         env:
           VERSION: ${{ steps.build.outputs.version }}
           APK_NAME: ${{ steps.build.outputs.apk }}
