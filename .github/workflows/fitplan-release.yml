@@ -3,7 +3,7 @@ name: FitPlan Android release
 on:
   push:
     paths:
-      - "fitplan/app/**"
+      - "fitplan/native/**"
       - "fitplan/source.zip"
       - "fitplan/version.json"
       - "fitplan/patch_android_back.py"
@@ -15,139 +15,133 @@ permissions:
   contents: write
 
 concurrency:
-  group: fitplan-release
+  group: fitplan-native-release
   cancel-in-progress: false
 
 jobs:
-  release:
+  native-rc:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Skip versions already published
+      - name: Check release already exists
         id: existing
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version=$(python -c "import json;print(json.load(open('fitplan/version.json'))['version'])")
-          if gh release view "fitplan-v$version" >/dev/null 2>&1; then
+          VERSION=$(python -c "import json;print(json.load(open('fitplan/version.json'))['version'])")
+          if gh release view "fitplan-v$VERSION" >/dev/null 2>&1; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "FitPlan $version already published; nothing to do"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-java@v4
         if: steps.existing.outputs.skip != 'true'
         with:
-          python-version: '3.11'
-      - name: Install build dependency
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
         if: steps.existing.outputs.skip != 'true'
-        run: python -m pip install 'cryptography>=43,<48'
-      - name: Restore initial FitPlan source archive
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK
         if: steps.existing.outputs.skip != 'true'
         run: |
-          if [ ! -f fitplan/app/build_apk.py ] && [ -f fitplan/source.zip ]; then
-            mkdir -p fitplan/app
-            python -m zipfile -e fitplan/source.zip fitplan/app
-          fi
-      - name: Apply Android system back navigation patch
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+      - name: Prepare app assets and back handling
         if: steps.existing.outputs.skip != 'true'
-        run: python fitplan/patch_android_back.py
-      - name: Verify source and signing secrets
-        if: steps.existing.outputs.skip != 'true'
-        env:
-          SIGNING_KEY: ${{ secrets.FITPLAN_SIGNING_KEY_PEM_B64 }}
-          SIGNING_CERT: ${{ secrets.FITPLAN_SIGNING_CERT_DER_B64 }}
         run: |
           set -euo pipefail
-          test -f fitplan/app/build_apk.py || { echo 'FitPlan app source has not been uploaded'; exit 1; }
-          test -n "$SIGNING_KEY" && test -n "$SIGNING_CERT" || { echo 'Missing FitPlan signing secrets'; exit 1; }
-          mkdir -p /tmp/fitplan-signing
-          printf '%s' "$SIGNING_KEY" | base64 -d > /tmp/fitplan-signing/key.pem
-          printf '%s' "$SIGNING_CERT" | base64 -d > /tmp/fitplan-signing/cert.der
-          chmod 600 /tmp/fitplan-signing/key.pem
-      - name: Verify signature identity and build APK
+          mkdir -p fitplan/tmp_extract
+          python -m zipfile -e fitplan/source.zip fitplan/tmp_extract
+          python - <<'PY'
+          from pathlib import Path
+          src=Path('fitplan/tmp_extract')
+          assets=src/'assets'
+          assert assets.is_dir(), f'Source ZIP must have assets/ at root: {list(src.iterdir())}'
+          dst=Path('fitplan/native/app/src/main/assets')
+          dst.mkdir(parents=True,exist_ok=True)
+          for file in assets.iterdir():
+            if file.is_file():
+              (dst/file.name).write_bytes(file.read_bytes())
+          PY
+          mkdir -p fitplan/app/assets
+          cp fitplan/native/app/src/main/assets/app.js fitplan/app/assets/app.js
+          python fitplan/patch_android_back.py
+          cp fitplan/app/assets/app.js fitplan/native/app/src/main/assets/app.js
+      - name: Set native version from version.json
         if: steps.existing.outputs.skip != 'true'
-        id: build
-        env:
-          FITPLAN_OUTPUT: ${{ runner.temp }}/FitPlan-release.apk
         run: |
           python - <<'PY'
-          import json, os, re, shutil
           from pathlib import Path
-          from cryptography import x509
-          from cryptography.hazmat.primitives import hashes, serialization
-          from cryptography.hazmat.primitives.asymmetric import rsa
-          root=Path('fitplan/app')
-          key=serialization.load_pem_private_key(Path('/tmp/fitplan-signing/key.pem').read_bytes(),password=None)
-          cert=x509.load_der_x509_certificate(Path('/tmp/fitplan-signing/cert.der').read_bytes())
-          expected='2de78f098f47c444b4ef054be6dfbcbab49a374a3a30937ead5d9d73f5d6e99c'
-          actual=cert.fingerprint(hashes.SHA256()).hex()
-          assert actual==expected, 'This key is NOT the signing identity used by FitPlan 1.9.7; aborting'
-          assert key.public_key().public_numbers()==cert.public_key().public_numbers(), 'Certificate and key mismatch'
+          import json,re
           v=json.loads(Path('fitplan/version.json').read_text())
-          version=str(v['version'])
-          code=int(v['version_code'])
-          assert code>62 and re.fullmatch(r'\d+\.\d+\.\d+',version)
-          source=(root/'build_apk.py').read_text()
-          def repl(pattern,value):
-              global source
-              source,n=re.subn(pattern,lambda m:value,source,count=1)
-              assert n==1, 'Builder format changed: '+pattern
-          repl(r"OUT=Path\([^\n]+\)","OUT=Path(os.environ['FITPLAN_OUTPUT'])")
-          repl(r"APP='[^']+'","APP='com.fitplan.autocv196'")
-          repl(r"\(ANDROID,'versionCode',\d+,'int'\)",f"(ANDROID,'versionCode',{code},'int')")
-          repl(r"\(ANDROID,'versionName','[^']+','str'\)",f"(ANDROID,'versionName','{version}','str')")
-          repl(r"after=b'Lcom/fitplan/[^']+/MainActivity;'","after=b'Lcom/fitplan/autocv193/MainActivity;'")
-          (root/'build_apk.py').write_text(source)
-          shutil.copy('/tmp/fitplan-signing/key.pem',root/'fitplan_signing_private_key.pem')
-          shutil.copy('/tmp/fitplan-signing/cert.der',root/'fitplan_signing_certificate.der')
-          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
-              out.write(f'version={version}\n')
-              out.write(f'apk=FitPlan-{version}.apk\n')
+          assert re.fullmatch(r'\d+\.\d+\.\d+',v['version'])
+          assert isinstance(v['version_code'],int) and v['version_code'] >= 65
+          p=Path('fitplan/native/app/build.gradle')
+          s=p.read_text()
+          s,n=re.subn(r'versionCode\s+\d+',f"versionCode {v['version_code']}",s,count=1)
+          assert n==1
+          s,n=re.subn(r"versionName\s+'[^']+'",f"versionName '{v['version']}'",s,count=1)
+          assert n==1
+          p.write_text(s)
           PY
-          python fitplan/app/build_apk.py
-          test -s "$FITPLAN_OUTPUT"
-          python - <<'PY'
-          from pathlib import Path
-          import os, zipfile
-          apk=Path(os.environ['FITPLAN_OUTPUT'])
-          with zipfile.ZipFile(apk) as z:
-              assert z.testzip() is None
-              assert {'AndroidManifest.xml','classes.dex','resources.arsc'}<=set(z.namelist())
-          print('APK file verified:',apk.stat().st_size,'bytes')
-          PY
-          rm -f fitplan/app/fitplan_signing_private_key.pem fitplan/app/fitplan_signing_certificate.der
-      - name: Publish FitPlan release
+      - name: Build compiled Android Activity APK
+        if: steps.existing.outputs.skip != 'true'
+        working-directory: fitplan/native
+        run: gradle --no-daemon :app:assembleRelease
+      - name: Verify signing secrets and sign APK
+        if: steps.existing.outputs.skip != 'true'
+        env:
+          KEY_B64: ${{ secrets.FITPLAN_SIGNING_KEY_PEM_B64 }}
+          CERT_B64: ${{ secrets.FITPLAN_SIGNING_CERT_DER_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$KEY_B64" && test -n "$CERT_B64"
+          mkdir -p /tmp/fitplan
+          printf '%s' "$KEY_B64" | base64 -d > /tmp/fitplan/key.pem
+          printf '%s' "$CERT_B64" | base64 -d > /tmp/fitplan/cert.der
+          chmod 600 /tmp/fitplan/key.pem
+          openssl x509 -inform der -in /tmp/fitplan/cert.der -out /tmp/fitplan/cert.pem
+          digest=$(openssl x509 -in /tmp/fitplan/cert.pem -outform der | sha256sum | cut -d' ' -f1)
+          test "$digest" = "2de78f098f47c444b4ef054be6dfbcbab49a374a3a30937ead5d9d73f5d6e99c"
+          openssl pkcs12 -export -inkey /tmp/fitplan/key.pem -in /tmp/fitplan/cert.pem -name fitplan -out /tmp/fitplan/signing.p12 -passout pass:temporaryFitplanBuildPass
+          APK=fitplan/native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$APK" /tmp/fitplan/aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-release.apk /tmp/fitplan/aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-release.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-release.apk | head -8
+          rm -f /tmp/fitplan/key.pem /tmp/fitplan/cert.der /tmp/fitplan/cert.pem /tmp/fitplan/signing.p12
+      - name: Publish release and update latest
         if: steps.existing.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.build.outputs.version }}
-          APK_NAME: ${{ steps.build.outputs.apk }}
-          FITPLAN_OUTPUT: ${{ runner.temp }}/FitPlan-release.apk
         run: |
           set -euo pipefail
-          tag="fitplan-v$VERSION"
-          cp "$FITPLAN_OUTPUT" "$APK_NAME"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release already exists: $tag (refusing to overwrite)"
-            exit 1
+          VERSION=$(python -c "import json;print(json.load(open('fitplan/version.json'))['version'])")
+          TAG="fitplan-v$VERSION"
+          test ! -z "$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Already released: $TAG"
+            exit 0
           fi
-          gh release create "$tag" "$APK_NAME" --title "FitPlan $VERSION" --notes "FitPlan Android update $VERSION"
-      - name: Update application version manifest
-        if: steps.existing.outputs.skip != 'true'
-        env:
-          VERSION: ${{ steps.build.outputs.version }}
-          APK_NAME: ${{ steps.build.outputs.apk }}
-        run: |
+          cp FitPlan-release.apk "FitPlan-$VERSION.apk"
+          gh release create "$TAG" "FitPlan-$VERSION.apk" --title "FitPlan $VERSION" --notes "Official FitPlan Android release - native compiled Activity and WebView."
           python - <<'PY'
-          import json,os
           from pathlib import Path
-          v=os.environ['VERSION'];apk=os.environ['APK_NAME']
-          url=f'https://github.com/ffast112-ff/cam112/releases/download/fitplan-v{v}/{apk}'
-          Path('fitplan/latest.json').write_text(json.dumps({'version':v,'apk_url':url,'notes':f'FitPlan {v} 업데이트'},ensure_ascii=False,indent=2)+'\n')
+          import json
+          v=json.loads(Path('fitplan/version.json').read_text())['version']
+          u=f'https://github.com/ffast112-ff/cam112/releases/download/fitplan-v{v}/FitPlan-{v}.apk'
+          Path('fitplan/latest.json').write_text(json.dumps({'version':v,'apk_url':u,'notes':f'FitPlan {v} 업데이트'},ensure_ascii=False,indent=2)+'\n')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add fitplan/latest.json
-          git commit -m "release(fitplan): update latest to $VERSION"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "release(fitplan): latest $VERSION"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
