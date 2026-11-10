@@ -1,10 +1,11 @@
-name: FitPlan 1.9.11 stabilization RC
+name: FitPlan 1.9.12 plate45 calibration RC
 
 on:
   push:
     paths:
       - "fitplan/native/**"
       - "fitplan/stabilize_v1911.py"
+      - "fitplan/plate45_calibration_patch.py"
       - ".github/workflows/fitplan-native-test.yml"
   workflow_dispatch:
 
@@ -51,7 +52,7 @@ jobs:
           cp fitplan/app/assets/app.js fitplan/native/app/src/main/assets/app.js
       - name: Stabilize app JS and verify syntax
         env:
-          FITPLAN_BUILD_VERSION: "1.9.11"
+          FITPLAN_BUILD_VERSION: "1.9.12"
         run: |
           set -euo pipefail
           python fitplan/stabilize_v1911.py
@@ -67,9 +68,30 @@ jobs:
           assert s.index("let lastSafeSnapshot=0,lastNativeSchedule=''") < s.index("let state=load();")
           print('Stable app smoke tests passed')
           PY
-      - name: Apply version code 66 to native project
+      - name: Apply 45 degree plate-loaded leg press calibration
         run: |
-          sed -i "s/versionCode 65/versionCode 67/; s/versionName '1.9.10'/versionName '1.9.11'/" fitplan/native/app/build.gradle
+          set -euo pipefail
+          python fitplan/plate45_calibration_patch.py
+          node --check fitplan/native/app/src/main/assets/app.js
+          node --check fitplan/native/app/src/main/assets/precision-engine-v5.js
+          node - <<'JS'
+          const v5=require('./fitplan/native/app/src/main/assets/precision-engine-v5.js');
+          const e={id:'leg_press',gear:'machine',kind:'compound',pattern:'squat'};
+          const a=v5.startingLoad({weight:96,level:2},e,10,10);
+          if(a.source!=='plate45'||a.weight!==20||a.step!==10)throw Error('Invalid plate45 starting trial');
+          const c=v5.begin({weight:96,level:2},e,'plate45_v1',10,10);
+          if(c.phase!=='sledcheck')throw Error('Missing empty-sled safety check');
+          const easy=v5.evaluateTrial(c,{weight:20,reps:8,rir:10,form:'good',pain:false});
+          if(easy.weight<=20||easy.weight>40)throw Error('Incorrect exploratory progression');
+          const done=v5.evaluateTrial({...c,phase:'instructions'},{weight:40,reps:8,rir:3,form:'good',pain:false});
+          if(done.status!=='ready'||done.weight!==40)throw Error('Cannot calibrate');
+          const stop=v5.evaluateTrial(c,{weight:20,reps:3,rir:0,form:'poor',pain:false});
+          if(stop.status!=='stopped')throw Error('Poor form must stop trials');
+          console.log('Plate45 calibration safety and RIR tests passed');
+          JS
+      - name: Apply version code 68 to native project
+        run: |
+          sed -i "s/versionCode 65/versionCode 68/; s/versionName '1.9.10'/versionName '1.9.12'/" fitplan/native/app/build.gradle
       - name: Build compiled Android Activity APK
         working-directory: fitplan/native
         run: gradle --no-daemon :app:assembleRelease
@@ -91,17 +113,17 @@ jobs:
           APK=fitplan/native/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$APK" /tmp/fitplan/aligned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.11-rc2.apk /tmp/fitplan/aligned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.11-rc2.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.11-rc2.apk | head -8
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.12-rc1.apk /tmp/fitplan/aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.12-rc1.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.12-rc1.apk | head -8
           rm -f /tmp/fitplan/key.pem /tmp/fitplan/cert.der /tmp/fitplan/cert.pem /tmp/fitplan/signing.p12
       - name: Publish isolated test release (DO NOT update latest.json)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if gh release view fitplan-v1.9.11-rc2 >/dev/null 2>&1; then
+          if gh release view fitplan-v1.9.12-rc1 >/dev/null 2>&1; then
             echo "Existing RC release. Refusing overwrite."
             exit 1
           fi
-          gh release create fitplan-v1.9.11-rc2 FitPlan-1.9.11-rc2.apk --prerelease --title "FitPlan 1.9.11 RC2 - stabilization test" --notes "Stabilization test for local data recovery, native background deadline notifications, in-app version sync and back navigation. Existing latest.json stays on 1.9.10."
+          gh release create fitplan-v1.9.12-rc1 FitPlan-1.9.12-rc1.apk --prerelease --title "FitPlan 1.9.12 RC1 - stabilization test" --notes "Plate-loaded 45-degree leg press separate sled resistance, per-side plate sum and supervised RIR calibration. Existing latest.json remains unchanged."
