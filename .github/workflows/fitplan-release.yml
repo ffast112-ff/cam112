@@ -5,6 +5,8 @@ on:
     paths:
       - "fitplan/app/**"
       - "fitplan/source.zip"
+      - "fitplan/version.json"
+      - "fitplan/patch_android_back.py"
   workflow_dispatch:
   schedule:
     - cron: '17,47 * * * *'
