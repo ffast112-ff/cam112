@@ -30,6 +30,8 @@ jobs:
             mkdir -p fitplan/app
             python -m zipfile -e fitplan/source.zip fitplan/app
           fi
+      - name: Apply Android system back navigation patch
+        run: python fitplan/patch_android_back.py
       - name: Verify source and signing secrets
         env:
           SIGNING_KEY: ${{ secrets.FITPLAN_SIGNING_KEY_PEM_B64 }}
