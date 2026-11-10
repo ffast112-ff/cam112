@@ -1,0 +1,94 @@
+name: FitPlan native Android startup RC
+
+on:
+  push:
+    paths:
+      - "fitplan/native/**"
+      - ".github/workflows/fitplan-native-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  native-rc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Prepare app assets and back handling
+        run: |
+          set -euo pipefail
+          mkdir -p fitplan/tmp_extract
+          python -m zipfile -e fitplan/source.zip fitplan/tmp_extract
+          python - <<'PY'
+          from pathlib import Path
+          src=Path('fitplan/tmp_extract')
+          assets=src/'assets'
+          assert assets.is_dir(), f'Source ZIP must have assets/ at root: {list(src.iterdir())}'
+          dst=Path('fitplan/native/app/src/main/assets')
+          dst.mkdir(parents=True,exist_ok=True)
+          for file in assets.iterdir():
+            if file.is_file():
+              (dst/file.name).write_bytes(file.read_bytes())
+          PY
+          python fitplan/patch_android_back.py || true
+          # The existing patch targets fitplan/app/assets. Copy its output when available.
+          if [ -f fitplan/app/assets/app.js ]; then
+            cp fitplan/app/assets/app.js fitplan/native/app/src/main/assets/app.js
+          else
+            python - <<'PY'
+          from pathlib import Path
+          p=Path('fitplan/native/app/src/main/assets/app.js')
+          s=p.read_text()
+          back=Path('fitplan/patch_android_back.py').read_text()
+          # Existing APK source already includes the in-app navigation guard.
+          assert 'fitplanBack' in s, 'No in-app Back handler'
+          PY
+          fi
+      - name: Build compiled Android Activity APK
+        working-directory: fitplan/native
+        run: gradle --no-daemon :app:assembleRelease
+      - name: Verify signing secrets and sign APK
+        env:
+          KEY_B64: ${{ secrets.FITPLAN_SIGNING_KEY_PEM_B64 }}
+          CERT_B64: ${{ secrets.FITPLAN_SIGNING_CERT_DER_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$KEY_B64" && test -n "$CERT_B64"
+          mkdir -p /tmp/fitplan
+          printf '%s' "$KEY_B64" | base64 -d > /tmp/fitplan/key.pem
+          printf '%s' "$CERT_B64" | base64 -d > /tmp/fitplan/cert.der
+          chmod 600 /tmp/fitplan/key.pem
+          openssl x509 -inform der -in /tmp/fitplan/cert.der -out /tmp/fitplan/cert.pem
+          digest=$(openssl x509 -in /tmp/fitplan/cert.pem -outform der | sha256sum | cut -d' ' -f1)
+          test "$digest" = "2de78f098f47c444b4ef054be6dfbcbab49a374a3a30937ead5d9d73f5d6e99c"
+          openssl pkcs12 -export -inkey /tmp/fitplan/key.pem -in /tmp/fitplan/cert.pem -name fitplan -out /tmp/fitplan/signing.p12 -passout pass:temporaryFitplanBuildPass
+          APK=fitplan/native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$APK" /tmp/fitplan/aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.10-rc1.apk /tmp/fitplan/aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.10-rc1.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.10-rc1.apk | head -8
+          rm -f /tmp/fitplan/key.pem /tmp/fitplan/cert.der /tmp/fitplan/cert.pem /tmp/fitplan/signing.p12
+      - name: Publish isolated test release (DO NOT update latest.json)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view fitplan-v1.9.10-rc1 >/dev/null 2>&1; then
+            echo "Existing RC release. Refusing overwrite."
+            exit 1
+          fi
+          gh release create fitplan-v1.9.10-rc1 FitPlan-1.9.10-rc1.apk --prerelease --title "FitPlan 1.9.10 RC1 - native startup fix" --notes "Native compiled Activity and WebView startup test. Same package and signer as 1.9.8. Existing latest.json is unchanged."
