@@ -1,4 +1,4 @@
-name: FitPlan 1.9.12 plate45 calibration RC
+name: FitPlan 1.9.13 full catalog RC
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - "fitplan/native/**"
       - "fitplan/stabilize_v1911.py"
       - "fitplan/plate45_calibration_patch.py"
+      - "fitplan/precision_v6_catalog_patch.py"
       - ".github/workflows/fitplan-native-test.yml"
   workflow_dispatch:
 
@@ -52,7 +53,7 @@ jobs:
           cp fitplan/app/assets/app.js fitplan/native/app/src/main/assets/app.js
       - name: Stabilize app JS and verify syntax
         env:
-          FITPLAN_BUILD_VERSION: "1.9.12"
+          FITPLAN_BUILD_VERSION: "1.9.13"
         run: |
           set -euo pipefail
           python fitplan/stabilize_v1911.py
@@ -89,9 +90,15 @@ jobs:
           if(stop.status!=='stopped')throw Error('Poor form must stop trials');
           console.log('Plate45 calibration safety and RIR tests passed');
           JS
-      - name: Apply version code 68 to native project
+      - name: Apply 31 exercise reference policies
         run: |
-          sed -i "s/versionCode 65/versionCode 68/; s/versionName '1.9.10'/versionName '1.9.12'/" fitplan/native/app/build.gradle
+          python fitplan/precision_v6_catalog_patch.py
+          node --check fitplan/native/app/src/main/assets/precision-engine-v5.js
+          node --check fitplan/native/app/src/main/assets/app.js
+          node -e "const v=require('./fitplan/native/app/src/main/assets/precision-engine-v5.js');if(Object.keys(v.CATALOG_V6).length!==31)process.exit(1);const e={id:'leg_press',gear:'machine',kind:'compound',pattern:'squat'};const p={sex:'male',weight:96,level:0};const w=v.startingLoad(p,e,10,10);if(w.weight<40||w.weight>80||v.begin(p,e,'plate45_v1',10,10).phase!=='sledcheck')process.exit(2);console.log('31 exercises and 45-degree leg press checked');"
+      - name: Apply version code 69 to native project
+        run: |
+          sed -i "s/versionCode 65/versionCode 69/; s/versionName '1.9.10'/versionName '1.9.13'/" fitplan/native/app/build.gradle
       - name: Build compiled Android Activity APK
         working-directory: fitplan/native
         run: gradle --no-daemon :app:assembleRelease
@@ -113,17 +120,17 @@ jobs:
           APK=fitplan/native/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$APK" /tmp/fitplan/aligned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.12-rc1.apk /tmp/fitplan/aligned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.12-rc1.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.12-rc1.apk | head -8
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.13-rc1.apk /tmp/fitplan/aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.13-rc1.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.13-rc1.apk | head -8
           rm -f /tmp/fitplan/key.pem /tmp/fitplan/cert.der /tmp/fitplan/cert.pem /tmp/fitplan/signing.p12
       - name: Publish isolated test release (DO NOT update latest.json)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if gh release view fitplan-v1.9.12-rc1 >/dev/null 2>&1; then
+          if gh release view fitplan-v1.9.13-rc1 >/dev/null 2>&1; then
             echo "Existing RC release. Refusing overwrite."
             exit 1
           fi
-          gh release create fitplan-v1.9.12-rc1 FitPlan-1.9.12-rc1.apk --prerelease --title "FitPlan 1.9.12 RC1 - stabilization test" --notes "Plate-loaded 45-degree leg press separate sled resistance, per-side plate sum and supervised RIR calibration. Existing latest.json remains unchanged."
+          gh release create fitplan-v1.9.13-rc1 FitPlan-1.9.13-rc1.apk --prerelease --title "FitPlan 1.9.13 RC1 - stabilization test" --notes "Plate-loaded 45-degree leg press separate sled resistance, per-side plate sum and supervised RIR calibration. Existing latest.json remains unchanged."
