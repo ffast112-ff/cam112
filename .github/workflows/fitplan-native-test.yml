@@ -43,20 +43,10 @@ jobs:
             if file.is_file():
               (dst/file.name).write_bytes(file.read_bytes())
           PY
-          python fitplan/patch_android_back.py || true
-          # The existing patch targets fitplan/app/assets. Copy its output when available.
-          if [ -f fitplan/app/assets/app.js ]; then
-            cp fitplan/app/assets/app.js fitplan/native/app/src/main/assets/app.js
-          else
-            python - <<'PY'
-          from pathlib import Path
-          p=Path('fitplan/native/app/src/main/assets/app.js')
-          s=p.read_text()
-          back=Path('fitplan/patch_android_back.py').read_text()
-          # Existing APK source already includes the in-app navigation guard.
-          assert 'fitplanBack' in s, 'No in-app Back handler'
-          PY
-          fi
+          mkdir -p fitplan/app/assets
+          cp fitplan/native/app/src/main/assets/app.js fitplan/app/assets/app.js
+          python fitplan/patch_android_back.py
+          cp fitplan/app/assets/app.js fitplan/native/app/src/main/assets/app.js
       - name: Build compiled Android Activity APK
         working-directory: fitplan/native
         run: gradle --no-daemon :app:assembleRelease
