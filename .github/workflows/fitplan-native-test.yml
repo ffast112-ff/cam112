@@ -59,7 +59,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           s=Path('fitplan/native/app/src/main/assets/app.js').read_text()
-          assert "const APP_VERSION='1.9.11';" in s
+          assert "const APP_VERSION=(()=>{" in s and "getAppVersion" in s and "nativeVersion" in s
           assert "function nativeSync()" in s
           assert "window.FitPlanNative.loadSnapshot()" in s
           assert "function fitplanBack()" in s
@@ -69,7 +69,7 @@ jobs:
           PY
       - name: Apply version code 66 to native project
         run: |
-          sed -i "s/versionCode 65/versionCode 66/; s/versionName '1.9.10'/versionName '1.9.11'/" fitplan/native/app/build.gradle
+          sed -i "s/versionCode 65/versionCode 67/; s/versionName '1.9.10'/versionName '1.9.11'/" fitplan/native/app/build.gradle
       - name: Build compiled Android Activity APK
         working-directory: fitplan/native
         run: gradle --no-daemon :app:assembleRelease
@@ -91,17 +91,17 @@ jobs:
           APK=fitplan/native/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$APK" /tmp/fitplan/aligned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.11-rc1.apk /tmp/fitplan/aligned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.11-rc1.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.11-rc1.apk | head -8
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.11-rc2.apk /tmp/fitplan/aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.11-rc2.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.11-rc2.apk | head -8
           rm -f /tmp/fitplan/key.pem /tmp/fitplan/cert.der /tmp/fitplan/cert.pem /tmp/fitplan/signing.p12
       - name: Publish isolated test release (DO NOT update latest.json)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if gh release view fitplan-v1.9.11-rc1 >/dev/null 2>&1; then
+          if gh release view fitplan-v1.9.11-rc2 >/dev/null 2>&1; then
             echo "Existing RC release. Refusing overwrite."
             exit 1
           fi
-          gh release create fitplan-v1.9.11-rc1 FitPlan-1.9.11-rc1.apk --prerelease --title "FitPlan 1.9.11 RC1 - stabilization test" --notes "Stabilization test for local data recovery, native background deadline notifications, in-app version sync and back navigation. Existing latest.json stays on 1.9.10."
+          gh release create fitplan-v1.9.11-rc2 FitPlan-1.9.11-rc2.apk --prerelease --title "FitPlan 1.9.11 RC2 - stabilization test" --notes "Stabilization test for local data recovery, native background deadline notifications, in-app version sync and back navigation. Existing latest.json stays on 1.9.10."
