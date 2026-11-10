@@ -1,10 +1,6 @@
 name: FitPlan native Android startup RC
 
 on:
-  push:
-    paths:
-      - "fitplan/native/**"
-      - ".github/workflows/fitplan-native-test.yml"
   workflow_dispatch:
 
 permissions:
