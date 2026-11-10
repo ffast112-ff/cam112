@@ -93,6 +93,17 @@ addition=r"""
  };
 """
 s=s.replace(marker,addition+'\n'+marker,1)
+# The leg-press first-use sled safety check must remain active under V6.
+s=s.replace("phase:first.source==='plate45'?'sledcheck':'instructions'","phase:e.id==='leg_press'?'sledcheck':'instructions'",1)
+# Correct the prior UI text that still claimed the proposed trial was always 20 kg.
+ap=Path('fitplan/native/app/src/main/assets/app.js')
+ui=ap.read_text(encoding='utf8')
+ui=ui.replace('이후 표시되는 20kg은 좌우 원판 합계로','이후 표시되는 중량은 좌우 원판 합계로')
+ui=ui.replace('실제 사용할 중량(kg) · 45도 원판형은 양쪽 추가 원판 합계<input',
+'''\${c.exerciseId==='leg_press'?'양쪽 추가 원판 합계(kg) · 썰매 제외':'실제 사용할 중량(kg)'}<input''')
+ui=ui.replace('<div class="callout"><strong>앱의 시험 후보 ','''<div class="callout"><strong>앱의 시험 후보 ''',1)
+ap.write_text(ui,encoding='utf8')
+
 s=s.replace("return {VERSION,calKey,usesLoad,standardOneRM,startingLoad,calibrationStatus,begin,evaluateTrial,",
             "return {VERSION,calKey,usesLoad,standardOneRM,startingLoad,CATALOG_V6,calibrationStatus,begin,evaluateTrial,",1)
 p.write_text(s,encoding='utf8')
