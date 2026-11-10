@@ -50,21 +50,21 @@ jobs:
           root=Path('fitplan/app')
           key=serialization.load_pem_private_key(Path('/tmp/fitplan-signing/key.pem').read_bytes(),password=None)
           cert=x509.load_der_x509_certificate(Path('/tmp/fitplan-signing/cert.der').read_bytes())
-          expected='841d4b5ce5eeaf428652494c6214db536a883f1fdb0c588413c5b1e76722a346'
+          expected='2de78f098f47c444b4ef054be6dfbcbab49a374a3a30937ead5d9d73f5d6e99c'
           actual=cert.fingerprint(hashes.SHA256()).hex()
-          assert actual==expected, 'This key is NOT the signing identity used by FitPlan 1.9.5; aborting'
+          assert actual==expected, 'This key is NOT the signing identity used by FitPlan 1.9.7; aborting'
           assert key.public_key().public_numbers()==cert.public_key().public_numbers(), 'Certificate and key mismatch'
           v=json.loads(Path('fitplan/version.json').read_text())
           version=str(v['version'])
           code=int(v['version_code'])
-          assert code>60 and re.fullmatch(r'\d+\.\d+\.\d+',version)
+          assert code>62 and re.fullmatch(r'\d+\.\d+\.\d+',version)
           source=(root/'build_apk.py').read_text()
           def repl(pattern,value):
               global source
               source,n=re.subn(pattern,lambda m:value,source,count=1)
               assert n==1, 'Builder format changed: '+pattern
           repl(r"OUT=Path\([^\n]+\)","OUT=Path(os.environ['FITPLAN_OUTPUT'])")
-          repl(r"APP='[^']+'","APP='com.fitplan.autocv193'")
+          repl(r"APP='[^']+'","APP='com.fitplan.autocv196'")
           repl(r"\(ANDROID,'versionCode',\d+,'int'\)",f"(ANDROID,'versionCode',{code},'int')")
           repl(r"\(ANDROID,'versionName','[^']+','str'\)",f"(ANDROID,'versionName','{version}','str')")
           repl(r"after=b'Lcom/fitplan/[^']+/MainActivity;'","after=b'Lcom/fitplan/autocv193/MainActivity;'")
