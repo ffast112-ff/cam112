@@ -43,6 +43,8 @@ function save(){
  nativeSync();
 }"""
 s=s.replace(marker,replacement,1)
+s=s.replace("let state=load();", "let lastSafeSnapshot=0,lastNativeSchedule='';\nlet state=load();",1)
+s=s.replace("let lastSafeSnapshot=0;\nlet lastNativeSchedule='';\nfunction nativeSync()", "function nativeSync()",1)
 # Native backup is a separate, app-private fallback; manual export remains required before uninstall.
 # On reset never silently preserve the user's explicitly deleted records.
 s=s.replace("function resetConfirm(){localStorage.removeItem(KEY);","function resetConfirm(){try{window.FitPlanNative?.clearSnapshot();}catch(e){}localStorage.removeItem(KEY);",1)
