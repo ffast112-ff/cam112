@@ -3,7 +3,7 @@ import json, os, re
 
 p=Path('fitplan/native/app/src/main/assets/app.js')
 s=p.read_text(encoding='utf-8')
-v=json.loads(Path('fitplan/version.json').read_text())['version']
+v=os.environ.get('FITPLAN_BUILD_VERSION') or json.loads(Path('fitplan/version.json').read_text())['version']
 s,n=re.subn(r"const APP_VERSION='[^']+';", "const APP_VERSION='"+v+"';",s,count=1)
 assert n==1,'App version marker missing'
 marker="function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('Cannot save',e)}}"
@@ -43,6 +43,11 @@ function save(){
  nativeSync();
 }"""
 s=s.replace(marker,replacement,1)
+# Restore last verified private snapshot only when localStorage has no record.
+needle="const a=JSON.parse(localStorage.getItem(KEY)||'null');"
+assert needle in s,'load storage marker missing'
+s=s.replace(needle,"let raw=localStorage.getItem(KEY);if(!raw&&window.FitPlanNative){try{const b=window.FitPlanNative.loadSnapshot();if(b){const snapshot=JSON.parse(b);if(snapshot&&snapshot.profile&&Array.isArray(snapshot.history)){raw=b;localStorage.setItem(KEY,b);}}}catch(e){console.warn('snapshot recovery',e)}}const a=JSON.parse(raw||'null');",1)
+
 s=s.replace("let state=load();", "let lastSafeSnapshot=0,lastNativeSchedule='';\nlet state=load();",1)
 s=s.replace("let lastSafeSnapshot=0;\nlet lastNativeSchedule='';\nfunction nativeSync()", "function nativeSync()",1)
 # Native backup is a separate, app-private fallback; manual export remains required before uninstall.
