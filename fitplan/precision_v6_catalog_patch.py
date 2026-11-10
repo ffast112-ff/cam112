@@ -100,7 +100,7 @@ ap=Path('fitplan/native/app/src/main/assets/app.js')
 ui=ap.read_text(encoding='utf8')
 ui=ui.replace('이후 표시되는 20kg은 좌우 원판 합계로','이후 표시되는 중량은 좌우 원판 합계로')
 ui=ui.replace('실제 사용할 중량(kg) · 45도 원판형은 양쪽 추가 원판 합계<input',
-'''\${c.exerciseId==='leg_press'?'양쪽 추가 원판 합계(kg) · 썰매 제외':'실제 사용할 중량(kg)'}<input''')
+'''${c.exerciseId==='leg_press'?'양쪽 추가 원판 합계(kg) · 썰매 제외':'실제 사용할 중량(kg)'}<input''')
 ui=ui.replace('<div class="callout"><strong>앱의 시험 후보 ','''<div class="callout"><strong>앱의 시험 후보 ''',1)
 ap.write_text(ui,encoding='utf8')
 
