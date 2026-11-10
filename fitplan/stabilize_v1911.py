@@ -4,7 +4,7 @@ import json, os, re
 p=Path('fitplan/native/app/src/main/assets/app.js')
 s=p.read_text(encoding='utf-8')
 v=os.environ.get('FITPLAN_BUILD_VERSION') or json.loads(Path('fitplan/version.json').read_text())['version']
-s,n=re.subn(r"const APP_VERSION='[^']+';", "const APP_VERSION=(()=>{try{const nativeVersion=window.FitPlanNative?.getAppVersion?.();return /^\\d+\\.\\d+\\.\\d+$/.test(nativeVersion)?nativeVersion:'"+v+"'}catch(e){return '"+v+"'}})();",s,count=1)
+s,n=re.subn(r"const APP_VERSION='[^']+';", lambda m:"const APP_VERSION=(()=>{try{const nativeVersion=window.FitPlanNative?.getAppVersion?.();return /^\\d+\\.\\d+\\.\\d+$/.test(nativeVersion)?nativeVersion:'"+v+"'}catch(e){return '"+v+"'}})();",s,count=1)
 assert n==1,'App version marker missing'
 marker="function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('Cannot save',e)}}"
 assert marker in s,'save() changed'
