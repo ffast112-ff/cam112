@@ -29,6 +29,10 @@ public final class MainActivity extends Activity {
     public static boolean isVisible(){return visible;}
     private volatile boolean permissionRequested=false;
     private final class NativeBridge {
+        @JavascriptInterface public String getAppVersion(){
+            try {return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}
+            catch(Throwable t){Log.e(TAG,"Cannot read APK version",t);return "";}
+        }
         @JavascriptInterface public void scheduleTimer(long deadline,String label,String alert){
             try { TimerAlarmReceiver.schedule(MainActivity.this,deadline,label,alert); } catch(Throwable t){Log.e(TAG,"Timer schedule error",t);}
             if(Build.VERSION.SDK_INT>=33 && !permissionRequested && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
