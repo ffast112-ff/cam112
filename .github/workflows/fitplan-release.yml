@@ -10,6 +10,9 @@ on:
       - "fitplan/precision_v6_catalog_patch.py"
       - "fitplan/plate45_calibration_patch.py"
       - "fitplan/stabilize_v1911.py"
+      - "fitplan/precision-engine-v7.js"
+      - "fitplan/apply_v7.py"
+      - "fitplan/test-v7.cjs"
   workflow_dispatch:
   schedule:
     - cron: '17,47 * * * *'
@@ -88,6 +91,25 @@ jobs:
           node --check fitplan/native/app/src/main/assets/precision-engine-v5.js
           node --check fitplan/native/app/src/main/assets/app.js
           node -e "const v=require('./fitplan/native/app/src/main/assets/precision-engine-v5.js');if(Object.keys(v.CATALOG_V6).length!==31)throw Error('Missing exercise standards');"
+      - name: Integrate Adaptive Coach V7.4 and verify compatibility
+        if: steps.existing.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          cp fitplan/precision-engine-v7.js fitplan/native/app/src/main/assets/precision-engine-v7.js
+          python fitplan/apply_v7.py
+          node --check fitplan/native/app/src/main/assets/precision-engine-v7.js
+          node --check fitplan/native/app/src/main/assets/app.js
+          node fitplan/test-v7.cjs
+          python - <<'PY'
+          from pathlib import Path
+          b=Path('fitplan/native/app/src/main/assets')
+          h=(b/'index.html').read_text()
+          j=(b/'app.js').read_text()
+          assert h.index('precision-engine-v4.js')<h.index('precision-engine-v7.js')<h.index('app.js')
+          assert "catch(error){console.warn('V7 fallback to V4',error)" in j
+          assert "if(s.v7){const v=s.v7;s.v7={changes:" in j
+          print('V7.4 production bundle checks passed')
+          PY
       - name: Set native version from version.json
         if: steps.existing.outputs.skip != 'true'
         run: |
