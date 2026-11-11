@@ -15,7 +15,8 @@ def change(old,new,required=True):
     s=s.replace(old,new,1)
 
 s,n=re.subn(r"const APP_VERSION='[^']+';","const APP_VERSION='1.9.11';",s,count=1)
-assert n==1
+if n==0:
+    assert 'const APP_VERSION=(()=>{' in s, 'Native version marker missing'
 change("FitPlanPrecisionV7?.planDay(plannerInput)","FitPlanPrecisionV75?.planDay(plannerInput)")
 change("FitPlanPrecisionV7?.planProgram(programInput)","FitPlanPrecisionV75?.planProgram(programInput)")
 change("const model=FitPlanPrecisionV7.learn(","const model=FitPlanPrecisionV75.learn(")
