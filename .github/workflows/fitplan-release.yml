@@ -16,6 +16,7 @@ on:
       - "fitplan/precision-engine-v75.js"
       - "fitplan/neon-v76.css"
       - "fitplan/apply_ui_v76.py"
+      - "fitplan/apply_native_update.py"
       - "fitplan/test-v7.cjs"
   workflow_dispatch:
   schedule:
@@ -135,6 +136,7 @@ jobs:
         if: steps.existing.outputs.skip != 'true'
         run: |
           python fitplan/apply_ui_v76.py
+          python fitplan/apply_native_update.py
           node --check fitplan/native/app/src/main/assets/app.js
       - name: Set native version from version.json
         if: steps.existing.outputs.skip != 'true'
