@@ -19,7 +19,7 @@ a=s.find(needle)
 assert a>0,'Home widget instructional card missing'
 b=s.find("'<button class=\"btn secondary\" onclick=\"Fit.todayCalendar()\">오늘로 이동</button></div>'",a)
 assert b>a,'Home widget card terminator missing'
-s=s[:a]+s[b+len("'<button class=\"btn secondary\" onclick=\"Fit.todayCalendar()\">오늘로 이동</button></div>'"):]
+s=s[:a]+"''"+s[b+len("'<button class=\"btn secondary\" onclick=\"Fit.todayCalendar()\">오늘로 이동</button></div>'"):]
 
 # 3 — Click exercise items in workout calendar for existing professional guide and video search.
 # For known planned exercises use their id. Unknown names get a guarded search link.
