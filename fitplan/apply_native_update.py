@@ -36,13 +36,13 @@ s=s[:start]+"""else if(modal.type==='update'){
  const progress=nativeUpdate.status;
  const busy=progress==='downloading'||progress==='ready'||progress==='installing';
  const label=progress==='downloading'?'다운로드 중…':progress==='permission'?'설치 권한 허용 후 돌아오기':progress==='error'?'다운로드 다시 시도':'앱 내부에서 다운로드 및 설치';
- content=\`<div class="eyebrow">FITPLAN 자동 업데이트</div><h2>새 버전 \${esc(modal.version)} 출시</h2>
- <p class="sub mt8">현재 \${APP_VERSION} · 브라우저를 거치지 않고 APK를 다운로드합니다. Android의 설치 승인은 필요합니다.</p>
- \${modal.notes?\`<div class="callout">\${esc(modal.notes)}</div>\`:''}
- \${progress!=='idle'?\`<div class="card mt12"><strong>\${esc(nativeUpdate.message||'업데이트 준비 중')}</strong><div class="fp-v76-progress mt12" role="progressbar" aria-valuenow="\${nativeUpdate.percent}" aria-valuemin="0" aria-valuemax="100"><i style="width:\${nativeUpdate.percent}%"></i></div><p class="sub mt8">\${progress==='downloading'?nativeUpdate.percent+'%':'Android 보안 정책에 따라 사용자 승인이 필요합니다.'}</p></div>\`:''}
- <button class="btn primary full mt12" onclick="Fit.openUpdate()" \${busy?'disabled':''}>\${label}</button>
+ content=`<div class="eyebrow">FITPLAN 자동 업데이트</div><h2>새 버전 ${esc(modal.version)} 출시</h2>
+ <p class="sub mt8">현재 ${APP_VERSION} · 브라우저를 거치지 않고 APK를 다운로드합니다. Android의 설치 승인은 필요합니다.</p>
+ ${modal.notes?`<div class="callout">${esc(modal.notes)}</div>`:''}
+ ${progress!=='idle'?`<div class="card mt12"><strong>${esc(nativeUpdate.message||'업데이트 준비 중')}</strong><div class="fp-v76-progress mt12" role="progressbar" aria-valuenow="${nativeUpdate.percent}" aria-valuemin="0" aria-valuemax="100"><i style="width:${nativeUpdate.percent}%"></i></div><p class="sub mt8">${progress==='downloading'?nativeUpdate.percent+'%':'Android 보안 정책에 따라 사용자 승인이 필요합니다.'}</p></div>`:''}
+ <button class="btn primary full mt12" onclick="Fit.openUpdate()" ${busy?'disabled':''}>${label}</button>
  <button class="btn secondary full mt8" onclick="Fit.closeModal()">닫기</button>
- <p class="sub mt8">다운로드한 APK의 패키지명·버전·서명을 확인한 뒤 설치 화면을 엽니다.</p>\`;
+ <p class="sub mt8">다운로드한 APK의 패키지명·버전·서명을 확인한 뒤 설치 화면을 엽니다.</p>`;
  }
  """+s[end:]
 assert '브라우저에서 APK를 받은 뒤' not in s
