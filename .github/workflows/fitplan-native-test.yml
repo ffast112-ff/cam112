@@ -1,4 +1,4 @@
-name: FitPlan 1.9.14 Adaptive Coach V7.4 RC2
+name: FitPlan 1.9.14 Adaptive Coach V7.4 RC3
 
 on:
   push:
@@ -116,14 +116,16 @@ jobs:
           h=(base/'index.html').read_text()
           assert 'FitPlanPrecisionV7.planDay' in j
           assert 'FitPlanPrecisionV7.planProgram' in j
+          assert "catch(error){console.warn('V7 fallback to V4',error)" in j
+          assert "if(s.v7){const v=s.v7;s.v7={changes:" in j
           assert 'trainingWeekday' in j and 'v7StateInsights' in j
           assert 'precision-engine-v7.js' in h
           assert h.index('precision-engine-v4.js')<h.index('precision-engine-v7.js')<h.index('app.js')
           print('Android V7.4 UI and script ordering checked')
           PY
-      - name: Apply version code 71 to native project
+      - name: Apply version code 72 to native project
         run: |
-          sed -i "s/versionCode 65/versionCode 71/; s/versionName '1.9.10'/versionName '1.9.14'/" fitplan/native/app/build.gradle
+          sed -i "s/versionCode 65/versionCode 72/; s/versionName '1.9.10'/versionName '1.9.14'/" fitplan/native/app/build.gradle
       - name: Build compiled Android Activity APK
         working-directory: fitplan/native
         run: gradle --no-daemon :app:assembleRelease
@@ -145,17 +147,17 @@ jobs:
           APK=fitplan/native/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f -p 4 "$APK" /tmp/fitplan/aligned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.14-rc2.apk /tmp/fitplan/aligned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.14-rc2.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.14-rc2.apk | head -8
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/fitplan/signing.p12 --ks-type PKCS12 --ks-key-alias fitplan --ks-pass pass:temporaryFitplanBuildPass --key-pass pass:temporaryFitplanBuildPass --out FitPlan-1.9.14-rc3.apk /tmp/fitplan/aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs FitPlan-1.9.14-rc3.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging FitPlan-1.9.14-rc3.apk | head -8
           rm -f /tmp/fitplan/key.pem /tmp/fitplan/cert.der /tmp/fitplan/cert.pem /tmp/fitplan/signing.p12
       - name: Publish isolated test release (DO NOT update latest.json)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if gh release view fitplan-v1.9.14-rc2 >/dev/null 2>&1; then
+          if gh release view fitplan-v1.9.14-rc3 >/dev/null 2>&1; then
             echo "Existing RC release. Refusing overwrite."
             exit 1
           fi
-          gh release create fitplan-v1.9.14-rc2 FitPlan-1.9.14-rc2.apk --prerelease --title "FitPlan 1.9.14 RC2 - stabilization test" --notes "V7.4 RC2: schedule sequence consistency, recovery-day RIR and load reduction, one added set per muscle weekly, recorded V4/V7 audit, and additional regressions. Does not change official latest.json."
+          gh release create fitplan-v1.9.14-rc3 FitPlan-1.9.14-rc3.apk --prerelease --title "FitPlan 1.9.14 RC3 - stabilization test" --notes "V7.4 RC2: schedule sequence consistency, recovery-day RIR and load reduction, one added set per muscle weekly, recorded V4/V7 audit, and additional regressions. Does not change official latest.json."
