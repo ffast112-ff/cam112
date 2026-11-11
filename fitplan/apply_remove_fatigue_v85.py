@@ -40,6 +40,7 @@ s=reg(s,r'\s*for\(const m in credit\)score\+=credit\[m\]\*Math\.max\(0,ctx\.fati
 s=s.replace('plateau?.stalled&&plateau?.recoveryAdequate?.4:1.1','plateau?.stalled?.5:1.1')
 s=s.replace('ctx.response?.[e.m]?.stalled&&ctx.response?.[e.m]?.recoveryAdequate?1:4','ctx.response?.[e.m]?.stalled?1:4')
 s=s.replace('        fatigue=ctx.fatigue.fatigue[e.m]*.16;','')
+s=s.replace("variant===2&&e.gear==='machine'?1.2:0),", "variant===2&&e.gear==='machine'?1.2:0);")
 s=s.replace('return familiar+simple+deficit+variety-fatigue-N(e.level)*.28;','return familiar+simple+deficit+variety-N(e.level)*.28;')
 s=s.replace('const count=working(it),fatigue=R(ctx.fatigue.fatigue[it.muscle],1),','const count=working(it),')
 s=s.replace(' · 최근 피로 참고값 ',' · 기록 기반 조정 ')
