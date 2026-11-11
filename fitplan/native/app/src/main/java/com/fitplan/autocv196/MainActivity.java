@@ -25,6 +25,7 @@ import android.content.res.Configuration;
 
 public final class MainActivity extends Activity {
     private WebView webView;
+    private FitPlanUpdater updater;
     private static volatile boolean visible=false;
     public static boolean isVisible(){return visible;}
     private volatile boolean permissionRequested=false;
@@ -41,6 +42,9 @@ public final class MainActivity extends Activity {
             }
         }
         @JavascriptInterface public void cancelTimer(){TimerAlarmReceiver.cancel(MainActivity.this);}
+        @JavascriptInterface public void downloadUpdate(String url){
+            if(updater!=null)updater.begin(url);
+        }
         @JavascriptInterface public void saveSnapshot(String json){
             if(json==null||json.length()>15000000)return;
             try{
@@ -80,6 +84,7 @@ public final class MainActivity extends Activity {
             settings.setDefaultTextEncodingName("UTF-8");
             settings.setMediaPlaybackRequiresUserGesture(false);
             webView.setBackgroundColor(Color.rgb(7,11,10));
+            updater=new FitPlanUpdater(this,webView);
             webView.addJavascriptInterface(new NativeBridge(), "FitPlanNative");
             webView.setWebChromeClient(new WebChromeClient() {
                 @Override public boolean onConsoleMessage(ConsoleMessage msg) {
@@ -111,7 +116,7 @@ public final class MainActivity extends Activity {
             root.addView(label);
         }
     }
-    @Override protected void onResume(){super.onResume();visible=true;}
+    @Override protected void onResume(){super.onResume();visible=true;if(updater!=null)updater.onResume();}
     @Override protected void onPause(){visible=false;super.onPause();}
     @Override public void onBackPressed() {
         if (webView != null) {
@@ -122,6 +127,7 @@ public final class MainActivity extends Activity {
         super.onConfigurationChanged(cfg);
     }
     @Override public void onDestroy() {
+        if(updater!=null){updater.destroy();updater=null;}
         if(webView!=null){webView.destroy();webView=null;}
         super.onDestroy();
     }
