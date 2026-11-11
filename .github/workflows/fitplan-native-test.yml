@@ -114,8 +114,8 @@ jobs:
           base=Path('fitplan/native/app/src/main/assets')
           j=(base/'app.js').read_text()
           h=(base/'index.html').read_text()
-          assert 'FitPlanPrecisionV7.planDay' in j
-          assert 'FitPlanPrecisionV7.planProgram' in j
+          assert 'FitPlanPrecisionV7?.planDay' in j
+          assert 'FitPlanPrecisionV7?.planProgram' in j
           assert "catch(error){console.warn('V7 fallback to V4',error)" in j
           assert "if(s.v7){const v=s.v7;s.v7={changes:" in j
           assert 'trainingWeekday' in j and 'v7StateInsights' in j
