@@ -19,6 +19,7 @@ const rnd=(v,n=2)=>Math.round(v*10**n)/10**n;
 const average=a=>a.length?a.reduce((v,x)=>v+x,0)/a.length:0;
 const median=a=>{if(!a.length)return 0;const v=a.slice().sort((x,y)=>x-y),k=v.length>>1;return v.length%2?v[k]:(v[k-1]+v[k])/2;};
 const blank=()=>Object.fromEntries(MUSCLES.map(m=>[m,0]));
+const localISO=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const at=(h,now)=>{const v=h?.finishedAt||h?.timestamp||h?.endTime||h?.date;const t=typeof v==='number'?v:Date.parse(v);return Number.isFinite(t)&&t>0&&t<=now? t:null;};
 const valid=(s)=>s&&s.done&&!s.warmup&&s.role!=='warmup'&&!s.pain&&s.form!=='poor';
 const countWork=it=>(it.sets||[]).filter(s=>!s.warmup&&s.role!=='warmup').length;
@@ -31,7 +32,7 @@ const selection=(history,catalog,now)=>{
    const id=s.actualId||it.currentId||it.eid||it.id,e=idx.get(id);
    if(!e)continue;
    const reps=num(s.actualReps,-1),weight=num(s.actualWeight,0),rir=num(s.rir,NaN);
-   const isHold=e.id==='plank'||e.pattern==='core',isLoad= !['body','band'].includes(e.gear)&&!['cardio','core'].includes(e.pattern);
+   const isLoad= !['body','band'].includes(e.gear)&&!['cardio','core'].includes(e.pattern);
    if(reps<=0||reps>3600||(isLoad&&weight<=0))continue;
    // e1RM is meaningful only for 3-12 reps, same exercise and equipment.
    const metric=isLoad?(reps>=3&&reps<=12&&Number.isFinite(rir)&&rir>=0&&rir<=5?weight*(1+Math.min(18,reps+rir)/30):null):reps;
@@ -119,18 +120,28 @@ function learn(input={}){
 function fatiguePenalty(items,model,profile){let p=0;for(const it of items||[]){const m=model.muscles[it.muscle];if(!m)continue;const c=countWork(it);const excess=Math.max(0,m.fatigue-2);p+=c*excess*(m.highFatigue?.9:.35);if(profile?.focus?.includes(it.muscle))p*=.98;}return rnd(p);}
 function adjustDay(base,input,model){
  const adjusted={...base,items:base.items.map(it=>({...it,sets:(it.sets||[]).map(s=>({...s}))}))};
+ const now=num(input.context?.now,Date.now());
+ const weeklyBudget=blank();
+ for(const h of input.history||[]){const t=at(h,now);if(t===null||now-t>WEEK)continue;
+   for(const change of h.v7?.changes||[])if(change.sets>0&&MUSCLES.includes(change.muscle))weeklyBudget[change.muscle]+=change.sets;
+ }
  let changes=[],used=new Set(),minEstimate=0;
  const pain=!!input.readiness?.pain,poor= input.readiness?.energy<=2||input.readiness?.sleep<=2||input.readiness?.soreness>=4;
  for(const it of adjusted.items){
   const m=model.muscles[it.muscle],working=it.sets.filter(s=>!s.warmup),n=working.length;
   if(!m||n<2)continue;
+  const recovery=poor||m.highFatigue&&m.fatigue>=4;
+  it.v7LoadFactor=recovery?.95:1;
+  for(const set of it.sets)if(!set.warmup){
+    set.targetRIR=clamp(Math.max(num(set.targetRIR,2),recovery?4:2),1,5);
+  }
   let delta=0;
   if(poor||pain||m.highFatigue&&m.fatigue>=4){delta=n>=3?-1:0;}
   else if(m.confidence>=.45&&m.changeSets!==0&&!used.has(it.muscle)){
-   delta=m.changeSets>0&&n<5&&adjusted.estimatedMinutes+3<=input.minutes?1:m.changeSets<0&&n>=3?-1:0;
+   delta=m.changeSets>0&&weeklyBudget[it.muscle]<1&&n<5&&adjusted.estimatedMinutes+3<=num(input.minutes,base.minutes)?1:m.changeSets<0&&n>=3?-1:0;
   }
   if(delta===-1){const last=it.sets.findLastIndex(s=>!s.warmup);if(last>=0){it.sets.splice(last,1);used.add(it.muscle);changes.push({exercise:it.id,muscle:it.muscle,sets:-1,reason:m.reason});minEstimate-=3;}}
-  else if(delta===1){const w=working[working.length-1];if(w){it.sets.push({...w,role:'working'});used.add(it.muscle);changes.push({exercise:it.id,muscle:it.muscle,sets:1,reason:m.reason});minEstimate+=3;}}
+  else if(delta===1){const w=working[working.length-1];if(w){it.sets.push({...w,role:'working'});used.add(it.muscle);weeklyBudget[it.muscle]++;changes.push({exercise:it.id,muscle:it.muscle,sets:1,reason:m.reason});minEstimate+=3;}}
  }
  adjusted.estimatedSeconds=Math.max(0,base.estimatedSeconds+minEstimate*60);
  adjusted.estimatedMinutes=Math.ceil(adjusted.estimatedSeconds/60);
@@ -139,55 +150,73 @@ function adjustDay(base,input,model){
  return adjusted;
 }
 function availableSlots(now,days,availableWeekdays,horizon=14){
- const out=[];for(let n=0;n<horizon;n++){
-  const date=new Date(now+n*DAY),day=date.getDay();
-  if(availableWeekdays.length?availableWeekdays.includes(day):true)out.push({day,offset:n,date:date.toISOString().slice(0,10),time:now+n*DAY});
+ const out=[];
+ // Use local-calendar days; ISO UTC conversion could shift a day near midnight.
+ const start=new Date(now);start.setHours(12,0,0,0);
+ for(let n=0;n<horizon;n++){
+  const date=new Date(start);date.setDate(start.getDate()+n);
+  const day=date.getDay();
+  if(availableWeekdays.length&&!availableWeekdays.includes(day))continue;
+  out.push({day,offset:n,date:localISO(date),time:date.getTime()});
  }
  if(availableWeekdays.length)return out;
- // If the user did not specify weekdays, spread sessions across each 7-day week.
- const indices=[];for(let w=0;w<Math.ceil(horizon/7);w++)for(let j=0;j<days;j++)indices.push(w*7+Math.floor(j*7/days));
+ // With no selected weekdays, use balanced slots spaced across each week.
+ const indices=[];
+ for(let w=0;w<Math.ceil(horizon/7);w++)for(let j=0;j<days;j++)indices.push(w*7+Math.floor(j*7/days));
  return out.filter(x=>indices.includes(x.offset));
 }
 function rollingHorizon(input,model,base){
  const p=V3.normalizeProfile(input.profile),now=num(input.context?.now,Date.now());
  const chosen=Array.isArray(input.availableWeekdays)?input.availableWeekdays:[];
  const allowed=[...new Set(chosen.map(Number).filter(v=>Number.isInteger(v)&&v>=0&&v<=6))];
- const slots=availableSlots(now,p.days,allowed,14).slice(0,Math.min(12,2*p.days));
- const split=V3.SPLITS.find(x=>x.id===base.split),patterns=split?.days||[];
- const options=[];
- for(let i=0;i<slots.length;i++){
-  const slot=slots[i],alternatives=[];
-  // Keep the selected split stable while evaluating its upcoming day templates.
-  for(let j=0;j<Math.min(3,patterns.length);j++){
-   const index=num(input.sessionIndex,0)+i+j;
-   const day=patterns[index%patterns.length];
-   const muscles=new Set();for(const pat of day.patterns)for(const m in CREDITS[pat]||{})if(CREDITS[pat][m]>=.35)muscles.add(m);
-   const quality=[...muscles].reduce((sum,m)=>{const x=model.muscles[m];return sum+1.5*(num(base.weeklyTarget?.[m],0)>num(base.weeklyDone?.[m],0)?1:0)-.18*x.fatigue;},0);
-   alternatives.push({dayIndex:index%patterns.length,sequenceIndex:index,name:day.name,muscles:[...muscles],quality});
-  }
-  options.push({slot,alternatives});
- }
- // Bounded beam search over 14 days, scoring balance, recovery, repetition and adherence.
- let beam=[{score:0,choices:[],last:{},counts:blank(),streak:0}];
- for(const entry of options){const next=[];
-  for(const b of beam)for(const c of entry.alternatives){
-   let gain=c.quality;
-   for(const m of c.muscles){const gap=entry.slot.offset-(b.last[m]??-10);
-    if(gap<1)gain-=4.5;else if(gap<2)gain-=2.5;else if(gap<model.muscles[m].recoveryDays)gain-=1.3;
-    gain+=1.2/(1+b.counts[m]);
+ const dates=availableSlots(now,p.days,allowed,14);
+ const split=V3.SPLITS.find(s=>s.id===base.split),patterns=split?.days||[];
+ if(!patterns.length)return {weeks:2,slots:[],score:0,assumedSchedule:!allowed.length,optimization:'fallback'};
+ // Each week selects up to the user's target frequency from available weekdays.
+ // Unlike the previous candidate, the split-day sequence ALWAYS matches the actual
+ // sessionIndex progression in the app; no unpersisted template-skipping.
+ const combinations=(arr,k)=>{
+  const out=[];function visit(start,chosen){if(chosen.length===k){out.push(chosen);return;}
+   for(let i=start;i<arr.length;i++)visit(i+1,[...chosen,arr[i]]);
+  }if(k>0)visit(0,[]);return out.slice(0,80);
+ };
+ const grouped=[dates.filter(s=>s.offset<7),dates.filter(s=>s.offset>=7)];
+ let beam=[{score:0,slots:[],last:{},counts:blank()}];
+ for(const weekDates of grouped){
+  const selections=combinations(weekDates,Math.min(p.days,weekDates.length));
+  const expanded=[];
+  for(const prior of beam)for(const select of selections){
+   let score=prior.score,last={...prior.last},counts={...prior.counts};
+   const planned=prior.slots.slice();
+   for(const date of select){
+    const index=num(input.sessionIndex,0)+planned.length;
+    const day=patterns[index%patterns.length],muscles=new Set();
+    for(const pat of day.patterns)for(const m in CREDITS[pat]||{})if(CREDITS[pat][m]>=.35)muscles.add(m);
+    let gain=0;
+    for(const m of muscles){
+      const x=model.muscles[m],gap=date.offset-(last[m]??-10);
+      if(gap<1)gain-=6;else if(gap<2)gain-=2.5;
+      else if(gap<x.recoveryDays)gain-=1;
+      gain+=2/(1+counts[m]);
+      if(num(base.weeklyTarget?.[m],0)>num(base.weeklyDone?.[m],0))gain+=.6;
+      gain-=.1*x.fatigue;
+      last[m]=date.offset;counts[m]++;
+    }
+    // Prefer shorter midweek gaps to cram days into one block.
+    if(planned.length&&date.offset-planned[planned.length-1].offset>5)gain-=.4;
+    score+=gain;
+    planned.push({date:date.date,weekday:date.day,offset:date.offset,dayName:day.name,
+      muscles:[...muscles],sessionIndex:index,score:rnd(gain)});
    }
-   // Rotation is preferred: small reward for the natural planned next day.
-   if(c.sequenceIndex===num(input.sessionIndex,0)+b.choices.length)gain+=2;
-   const last={...b.last},counts={...b.counts};for(const m of c.muscles){last[m]=entry.slot.offset;counts[m]++;}
-   next.push({score:b.score+gain,choices:[...b.choices,{date:entry.slot.date,weekday:entry.slot.day,
-     dayName:c.name,muscles:c.muscles,sessionIndex:c.sequenceIndex,score:rnd(gain)}],last,counts});
+   expanded.push({score,slots:planned,last,counts});
   }
-  beam=next.sort((a,b)=>b.score-a.score||JSON.stringify(a.choices).localeCompare(JSON.stringify(b.choices))).slice(0,8);
+  if(expanded.length)beam=expanded.sort((a,b)=>b.score-a.score||JSON.stringify(a.slots).localeCompare(JSON.stringify(b.slots))).slice(0,12);
  }
- const winner=beam[0]||{score:0,choices:[]};
- return {weeks:2,score:rnd(winner.score),slots:winner.choices,availableWeekdays:allowed,assumedSchedule:!allowed.length,
-   explanation:allowed.length?'설정한 운동 가능 요일에서 다음 2주 분할·회복 간격을 비교했습니다.':'운동 가능 요일을 지정하지 않아 주간 운동 횟수를 가능한 한 균등하게 배치했습니다.',
-   candidateBeamWidth:8,optimization:'bounded-beam-search',noGuarantee:true};
+ const result=beam[0]||{score:0,slots:[]};
+ return {weeks:2,score:rnd(result.score),slots:result.slots,availableWeekdays:allowed,assumedSchedule:!allowed.length,
+  explanation:allowed.length?'설정한 운동 가능 요일에서 분할 순서를 지키면서 운동 간격을 최적화했습니다.':'요일 지정이 없어 주간 운동 횟수를 가능한 한 균등하게 배치했습니다.',
+  candidateBeamWidth:12,optimization:'bounded-schedule-beam-search',noGuarantee:true,
+  frequencyShortfall:result.slots.length<2*p.days};
 }
 function compare(base,adapted,model,input){
  const baseSets=base.items.reduce((n,it)=>n+countWork(it),0),newSets=adapted.items.reduce((n,it)=>n+countWork(it),0);
@@ -247,8 +276,19 @@ function audit(input={}){
    v7CounterfactualAvailable:false});
  }
  const rate=f=>rnd(average(out.map(f)),3);
+ const groups={};for(const h of history){
+  const engine=/^7/.test(String(h.engineVersion||''))?'V7':'V4_or_legacy';
+  const all=(h.items||[]).flatMap(it=>(it.sets||[]).filter(s=>!s.warmup));
+  if(!all.length)continue;
+  const done=all.filter(s=>s.done&&!s.pain&&s.form!=='poor');
+  if(!groups[engine])groups[engine]={sessions:0,completed:0,total:0,pain:0,veryHard:0};
+  const g=groups[engine];g.sessions++;g.total+=all.length;g.completed+=done.length;
+  if(h.feedback?.pain)g.pain++;if(num(h.feedback?.difficulty,5)>=9)g.veryHard++;
+ }
+ for(const g of Object.values(groups)){g.completion=g.total?rnd(g.completed/g.total,3):0;
+  g.painReportRate=rnd(g.pain/g.sessions,3);g.veryHardRate=rnd(g.veryHard/g.sessions,3);}
  return {schema:'precision-v7-audit',records:out.length,holdout:out,
-   observed:{completion:rate(x=>x.completion),painReports:rate(x=>x.pain?1:0),veryHardSessions:rate(x=>x.overexertion?1:0)},
+   observed:{completion:rate(x=>x.completion),painReports:rate(x=>x.pain?1:0),veryHardSessions:rate(x=>x.overexertion?1:0)},byEngine:groups,
    // Historical V4 sessions cannot establish counterfactual V7 improvements.
    conclusion:'과거 V4 기록은 운영 지표만 검증합니다. V7 효과를 평가하려면 실제 V7 계획과 비교 데이터가 필요합니다.',
    validatedSuperior:false,protocol:'rolling-origin chronological holdout, no future-data leakage'};
