@@ -29,7 +29,7 @@ for(const view of ['home','work','history','state','schedule']){
   assert(!text.includes('화면을 불러오지 못했습니다'),view+' crashed while rendering');
   assert(text.length>30,view+' produced blank UI');
   const nav=win.document.querySelector('.tabbar');
-  assert(nav&&nav.querySelectorAll('button').length===5,'Bottom navigation not rendered for '+view);
+  assert(nav&&nav.querySelectorAll('button').length===4,'Bottom navigation not rendered for '+view);
   assert(win.document.querySelectorAll('svg.fp-art').length===0,'Broken external svg icon still used');
   const icons=[...win.document.querySelectorAll('img.fp-art')];
   assert(icons.length>=5,'Missing navigation images: '+view);
@@ -64,6 +64,27 @@ assert(win.document.querySelector('#app').textContent.includes('1세트'),'Compl
 const detailIcons=win.document.querySelectorAll('img.fp-art.tiny-art').length;
 assert(detailIcons>0,'Decorative detailed menu images were not rendered');
 console.log('PASS history date details and image-based secondary icons',detailIcons);
+
+
+win.Fit.go('home');
+const homeText=win.document.querySelector('#app').textContent;
+assert(homeText.includes('운동 시작')||homeText.includes('운동 이어하기'),'Homepage needs a single primary workout action');
+assert(!homeText.includes('주간 운동 추세'),'Duplicate homepage trend should be removed');
+win.Fit.go('state');
+assert(win.document.querySelector('.fp-v8-stats'),'Condensed three-metric analytics missing');
+const mainTabs=[...win.document.querySelectorAll('.tabbar button')].map(b=>b.textContent.trim());
+assert.deepEqual(mainTabs,['홈','운동','일정','분석']);
+win.fitplanBack();
+assert(win.document.querySelector('#app').textContent.includes('이번 주'),'Android back must return to prior homepage');
+win.Fit.go('ready');
+const rng=win.document.querySelector('input[type="range"]');
+assert(rng&&rng.style.getPropertyValue('--fp-pct').trim(),'Visible slider percent must follow selected time');
+win.Fit.go('schedule');
+const buttons=win.document.querySelector('.fp-calendar-actions');
+assert(buttons&&buttons.querySelectorAll('button').length===3,'Calendar must keep three actions in fixed row');
+const legend=win.document.querySelector('.fp-calendar-legend');
+assert(legend,'Calendar should retain status legend');
+console.log('PASS V8: four tabs, single home action, prior-screen back, slider sync, fixed calendar actions');
 
 assert(!errors.some(x=>/FitPlan render error|Uncaught/i.test(x)),errors.join('\n'));
 const css=fs.readFileSync(path.join(assets,'style.css'),'utf8');
