@@ -50,6 +50,21 @@ for(const view of ['home','work','history','state','schedule']){
   }
   process.stdout.write('PASS '+view+' '+text.length+' chars '+icons.length+' icons\n');
 }
+// Regression: projected days are not hard-coded Tue/Thu/Sat; actual exercise details display.
+win.Fit.trainingWeekday(-1);
+assert.deepStrictEqual(Array.from(win.FitEngine.state().settings.trainingWeekdays||[]),[],'No fixed weekday constraint');
+const today=new Date(),local=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+win.FitEngine.state().history.push({
+  schema:19,finishedAt:Date.now(),splitName:'테스트 하체',
+  items:[{currentId:'test-exercise',sets:[{done:true,warmup:false,role:'work',actualWeight:90,actualReps:12}]}]
+});
+win.Fit.go('schedule');win.Fit.selectCalendar(local);
+assert(win.document.querySelector('#app').textContent.includes('테스트 하체'),'Completed workout split missing on calendar');
+assert(win.document.querySelector('#app').textContent.includes('1세트'),'Completed exercise count missing on calendar');
+const detailIcons=win.document.querySelectorAll('img.fp-art.tiny-art').length;
+assert(detailIcons>0,'Decorative detailed menu images were not rendered');
+console.log('PASS history date details and image-based secondary icons',detailIcons);
+
 assert(!errors.some(x=>/FitPlan render error|Uncaught/i.test(x)),errors.join('\n'));
 const css=fs.readFileSync(path.join(assets,'style.css'),'utf8');
 assert(!css.includes('}\\n.fp-art'),'CSS contains escaped newline');
