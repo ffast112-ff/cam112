@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const DAY=86400000;
-const V7=require('./assets/precision-engine-v7.js');
+const V7=require('./native/app/src/main/assets/precision-engine-v7.js');
 const ids=['leg_press','goblet_squat','body_squat','split_squat','chest_press','db_press','bench_press','pushup','cable_fly','lat_pulldown','assisted_pullup','pullup','seated_row','db_row','band_row','rld_machine','db_rdl','glute_bridge','hip_thrust','shoulder_press','db_shoulder','lateral_raise','face_pull','triceps_push','triceps_db','biceps_curl','cable_curl','calf_raise','plank','dead_bug','walking'];
 const pat=['squat','squat','squat','squat','push','push','push','push','chestiso','pullvertical','pullvertical','pullvertical','pullhorizontal','pullhorizontal','pullhorizontal','hinge','hinge','glutes','glutes','verticalpush','verticalpush','shoulderiso','shoulderiso','triceps','triceps','biceps','biceps','calves','core','core','cardio'];
 const muscles=['하체','하체','하체','하체','가슴','가슴','가슴','가슴','가슴','등','등','등','등','등','등','뒤허벅지','뒤허벅지','둔근','둔근','어깨','어깨','어깨','어깨','삼두','삼두','이두','이두','종아리','복부','복부','유산소'];
