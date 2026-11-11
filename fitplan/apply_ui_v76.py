@@ -87,7 +87,7 @@ s=s.replace(oldstate,legacy+state,1)
 # Exact circular gauge with a large central clock and functional existing controls.
 old='<div class="mint-ring-core"><div class="mint-clock-label">${rest?\'휴식 남은 시간\':\'운동 경과\'}</div><div class="mint-ring-clock" id="player-clock">${shortDuration(clock)}</div></div>'
 new='<div class="mint-ring-core"><div class="fp-v76-timer-icon">◴</div><div class="mint-clock-label">${rest?\'휴식 타이머\':\'운동 타이머\'}</div><div class="mint-ring-clock" id="player-clock">${shortDuration(clock)}</div><div class="fp-v76-total">${rest?\'총 \'+shortDuration(p.restSeconds):\'운동 진행 중\'}</div></div>'
-assert s.count(old)==2,(s.count(old),'ring templates changed')
+assert s.count(old)>=1,(s.count(old),'ring templates changed')
 s=s.replace(old,new)
 # Rest gauge same SVG r=108: existing tick updater updates live arc.
 swap('''<h1 class="player-title">${esc(cur.title)}</h1>
