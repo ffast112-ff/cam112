@@ -59,7 +59,7 @@ public final class FitPlanCalendarWidget extends AppWidgetProvider {
         if(chosen!=null)for(int i=0;i<chosen.length();i++)weekdays.add(String.valueOf(chosen.optInt(i)));
         if(weekdays.isEmpty()){weekdays.add("1");weekdays.add("3");weekdays.add("5");}
         int height=am.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,200);
-        boolean compact=height<155;
+        boolean compact=height<255;
         root.removeAllViews(R.id.widget_calendar);
         int firstDay=(month.get(Calendar.DAY_OF_WEEK)+6)%7;
         int count=compact?7:42;
@@ -98,7 +98,7 @@ public final class FitPlanCalendarWidget extends AppWidgetProvider {
                 cell.setTextColor(R.id.widget_day,completedDay?GREEN:planned?WHITE:GRAY);
                 if(key.equals(iso(now)))cell.setInt(R.id.widget_day,"setBackgroundResource",R.drawable.fitplan_widget_today);
                 else if(!compact&&cursor.get(Calendar.MONTH)!=month.get(Calendar.MONTH))
-                    cell.setInt(R.id.widget_day,"setAlpha",115);
+                    cell.setTextColor(R.id.widget_day,Color.rgb(104,125,120));
                 week.addView(R.id.widget_week_cells,cell);
                 cursor.add(Calendar.DAY_OF_MONTH,1);
             }
