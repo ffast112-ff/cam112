@@ -14,6 +14,8 @@ on:
       - "fitplan/apply_v7.py"
       - "fitplan/apply_v75.py"
       - "fitplan/precision-engine-v75.js"
+      - "fitplan/neon-v76.css"
+      - "fitplan/apply_ui_v76.py"
       - "fitplan/test-v7.cjs"
   workflow_dispatch:
   schedule:
@@ -129,6 +131,11 @@ jobs:
           assert Path('fitplan/native/app/src/main/res/drawable/fitplan_icon.png').is_file()
           print('V7.5 native integration checks passed')
           PY
+      - name: Apply V7.6 visual UI
+        if: steps.existing.outputs.skip != 'true'
+        run: |
+          python fitplan/apply_ui_v76.py
+          node --check fitplan/native/app/src/main/assets/app.js
       - name: Set native version from version.json
         if: steps.existing.outputs.skip != 'true'
         run: |
