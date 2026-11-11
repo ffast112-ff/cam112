@@ -19,6 +19,7 @@ on:
       - "fitplan/apply_native_update.py"
       - "fitplan/apply_schedule_icons_v77.py"
       - "fitplan/icons-v77.svg"
+      - "fitplan/test-ui-smoke.cjs"
       - "fitplan/test-v7.cjs"
   workflow_dispatch:
   schedule:
@@ -141,6 +142,14 @@ jobs:
           python fitplan/apply_native_update.py
           python fitplan/apply_schedule_icons_v77.py
           node --check fitplan/native/app/src/main/assets/app.js
+      - name: Render five FitPlan screens and test calendar icons
+        if: steps.existing.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          cd fitplan
+          npm install --no-save --no-package-lock --silent jsdom@26
+          node test-ui-smoke.cjs
+          cd ..
       - name: Set native version from version.json
         if: steps.existing.outputs.skip != 'true'
         run: |
