@@ -18,6 +18,7 @@ on:
       - "fitplan/apply_ui_v76.py"
       - "fitplan/apply_native_update.py"
       - "fitplan/apply_schedule_icons_v77.py"
+      - "fitplan/apply_schedule_detail_v78.py"
       - "fitplan/icons-v77.svg"
       - "fitplan/test-ui-smoke.cjs"
       - "fitplan/test-v7.cjs"
@@ -141,6 +142,7 @@ jobs:
           python fitplan/apply_ui_v76.py
           python fitplan/apply_native_update.py
           python fitplan/apply_schedule_icons_v77.py
+          python fitplan/apply_schedule_detail_v78.py
           node --check fitplan/native/app/src/main/assets/app.js
       - name: Render five FitPlan screens and test calendar icons
         if: steps.existing.outputs.skip != 'true'
