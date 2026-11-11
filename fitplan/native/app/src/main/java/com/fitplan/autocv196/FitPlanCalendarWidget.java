@@ -52,12 +52,13 @@ public final class FitPlanCalendarWidget extends AppWidgetProvider {
         SharedPreferences prefs=c.getSharedPreferences("fitplan_widget",Context.MODE_PRIVATE);
         JSONObject data;
         try{data=new JSONObject(prefs.getString("schedule","{}"));}catch(Exception e){data=new JSONObject();}
-        Set<String> done=new HashSet<>(),weekdays=new HashSet<>();
+        Set<String> done=new HashSet<>(),weekdays=new HashSet<>(),plannedDates=new HashSet<>();
         JSONObject override=data.optJSONObject("overrides");
-        JSONArray dates=data.optJSONArray("done"),chosen=data.optJSONArray("weekdays");
+        JSONArray dates=data.optJSONArray("done"),chosen=data.optJSONArray("weekdays"),projected=data.optJSONArray("plannedDates");
         if(dates!=null)for(int i=0;i<dates.length();i++)done.add(dates.optString(i));
         if(chosen!=null)for(int i=0;i<chosen.length();i++)weekdays.add(String.valueOf(chosen.optInt(i)));
-        if(weekdays.isEmpty()){weekdays.add("1");weekdays.add("3");weekdays.add("5");}
+        if(projected!=null)for(int i=0;i<projected.length();i++)plannedDates.add(projected.optString(i));
+        // Do not invent a fixed Tue/Thu/Sat schedule when the user has selected no weekdays.
         int height=am.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,200);
         boolean compact=height<255;
         root.removeAllViews(R.id.widget_calendar);
@@ -74,7 +75,7 @@ public final class FitPlanCalendarWidget extends AppWidgetProvider {
             String key=iso(day);
             int wk=day.get(Calendar.DAY_OF_WEEK)-1;
             String overrideValue=override==null?"":override.optString(key,"");
-            if(!done.contains(key)&&("planned".equals(overrideValue)||(!"rest".equals(overrideValue)&&weekdays.contains(String.valueOf(wk))))){
+            if(!done.contains(key)&&("planned".equals(overrideValue)||(!"rest".equals(overrideValue)&&plannedDates.contains(key)))){
                 next=(day.get(Calendar.MONTH)+1)+"/"+day.get(Calendar.DAY_OF_MONTH)+" 운동 예정";break;
             }
             day.add(Calendar.DAY_OF_MONTH,1);
@@ -91,7 +92,7 @@ public final class FitPlanCalendarWidget extends AppWidgetProvider {
                 int weekday=cursor.get(Calendar.DAY_OF_WEEK)-1;
                 String ov=override==null?"":override.optString(key,"");
                 boolean completedDay=done.contains(key);
-                boolean planned="planned".equals(ov)||(!"rest".equals(ov)&&weekdays.contains(String.valueOf(weekday)));
+                boolean planned="planned".equals(ov)||(!"rest".equals(ov)&&plannedDates.contains(key));
                 RemoteViews cell=new RemoteViews(c.getPackageName(),R.layout.fitplan_widget_cell);
                 String mark=completedDay?"●":planned?"○":"";
                 cell.setTextViewText(R.id.widget_day,cursor.get(Calendar.DAY_OF_MONTH)+"\n"+mark);
