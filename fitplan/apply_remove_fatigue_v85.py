@@ -34,6 +34,7 @@ write('precision-engine-v3.js',s)
 # V4: no inferred muscle fatigue and no effect in score or sets.
 s=read('precision-engine-v4.js')
 s=reg(s,r'const pressure=read=>.*?;','const pressure=read=>!!read.pain;')
+s=s.replace('if(pressure(r)||response[e.m]?.highFatigue)return 2;', 'if(pressure(r))return 2;')
 s=reg(s,r'function recentFatigue\(history,catalog,now\)\{.*?\n\}','')
 s=reg(s,r'\s*for\(const m in credit\)score\+=credit\[m\]\*Math\.max\(0,ctx\.fatigue\.fatigue\[m\]-2\.5\)\*\.65\*working\(z\);','')
 s=s.replace('plateau?.stalled&&plateau?.recoveryAdequate?.4:1.1','plateau?.stalled?.5:1.1')
