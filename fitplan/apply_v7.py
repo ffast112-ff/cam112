@@ -8,6 +8,13 @@ assert old in s;s=s.replace(old,new,1)
 old='history:state.history,sessionIndex:state.sessionIndex,minutes,context:{planMemory:state.planMemory,pace:FitPlanAdvanced.pace(state.history).factor}});'
 new='history:state.history,sessionIndex:state.sessionIndex,minutes,availableWeekdays:state.settings.trainingWeekdays||[],context:{planMemory:state.planMemory,pace:FitPlanAdvanced.pace(state.history).factor}});'
 assert old in s;s=s.replace(old,new,1)
+# Keep V4 machine-specific load decisions and add V7's bounded recovery-day reduction.
+old='const adjusted=load?(knownLoad===null?0:Math.max(unit,roundTo(knownLoad*(z.role===\'warmup\'?.5:z.role===\'backoff\'?.9:1),unit))):initial;'
+new='const adjusted=load?(knownLoad===null?0:Math.max(unit,roundTo(knownLoad*(z.role===\'warmup\'?.5:z.role===\'backoff\'?.9:1)*(it.v7LoadFactor||1),unit))):initial;'
+assert old in s;s=s.replace(old,new,1)
+old='targetWeight:adjusted,targetReps:z.targetReps,'
+new='targetWeight:adjusted,targetReps:z.targetReps,targetRIR:z.targetRIR,'
+assert old in s;s=s.replace(old,new,1)
 old='return {schema:46,engineVersion:result.version||\'4.0\',optimizer:result.optimizer,'
 new='return {schema:46,engineVersion:result.version||\'4.0\',v7:result.v7,optimizer:result.optimizer,'
 assert old in s;s=s.replace(old,new,1)
@@ -32,6 +39,9 @@ s=s.replace(needle,'''${p.rolling?`<div class="subhead"><strong>V7 · 향후 2�
 needle='${cycleWidget()}${advancedStateInsights()}${extendedStateInsights()}${v5MuscleQuality()}'
 assert needle in s
 s=s.replace(needle,'${cycleWidget()}${v7StateInsights()}${advancedStateInsights()}${extendedStateInsights()}${v5MuscleQuality()}',1)
+needle='<div class="tiny muted mt8">휴식 ${it.rest}초</div></div>`;}'
+assert needle in s
+s=s.replace(needle,"<div class=\"tiny muted mt8\">휴식 ${it.rest}초 · 목표 RIR ${it.sets.find(z=>!z.warmup)?.targetRIR??2}회</div></div>`;}",1)
 needle='function historyView(){'
 assert needle in s
 add='''function v7StateInsights(){
