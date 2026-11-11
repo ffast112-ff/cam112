@@ -23,6 +23,9 @@ on:
       - "fitplan/apply_compact_ui_v80.py"
       - "fitplan/apply_ui_fixes_v81.py"
       - "fitplan/apply_player_layout_v82.py"
+      - "fitplan/apply_quality_v83.py"
+      - "fitplan/apply_quality_gate_v83.py"
+      - "fitplan/test-quality-v83.cjs"
       - "fitplan/apply_launcher_icon_v80.py"
       - "fitplan/generate_chimes_v80.py"
       - "fitplan/schedule-queue-v79.js"
@@ -105,6 +108,8 @@ jobs:
           python fitplan/stabilize_v1911.py
           python fitplan/plate45_calibration_patch.py
           python fitplan/precision_v6_catalog_patch.py
+          python fitplan/apply_quality_v83.py
+          node --check fitplan/native/app/src/main/assets/precision-engine-v4.js
           node --check fitplan/native/app/src/main/assets/precision-engine-v5.js
           node --check fitplan/native/app/src/main/assets/app.js
           node -e "const v=require('./fitplan/native/app/src/main/assets/precision-engine-v5.js');if(Object.keys(v.CATALOG_V6).length!==31)throw Error('Missing exercise standards');"
@@ -133,6 +138,7 @@ jobs:
           set -euo pipefail
           python -m pip install --quiet Pillow
           python fitplan/apply_v75.py
+          python fitplan/apply_quality_gate_v83.py
           node --check fitplan/native/app/src/main/assets/precision-engine-v75.js
           node --check fitplan/native/app/src/main/assets/app.js
           python - <<'PY'
@@ -144,6 +150,18 @@ jobs:
           assert Path('fitplan/native/app/src/main/res/drawable/fitplan_icon.png').is_file()
           print('V7.5 native integration checks passed')
           PY
+      - name: Check comprehensive workout prescription quality
+        if: steps.existing.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          node fitplan/test-quality-v83.cjs
+      - name: Archive workout quality scenario results
+        if: steps.existing.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitplan-quality-v83
+          path: fitplan/quality-v83-results.json
+          retention-days: 30
       - name: Apply V7.6 visual UI
         if: steps.existing.outputs.skip != 'true'
         run: |
