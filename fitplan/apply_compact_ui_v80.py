@@ -115,6 +115,9 @@ change(old,new)
 # Alignment of slider with shown minutes; monochrome green track no split blue segments.
 change('oninput="Fit.liveMinutes(this.value)" onchange="Fit.setMinutes(this.value)"',
  'style="--fp-pct:__D__{(todayMinutes-30)/90*100}%" oninput="Fit.liveMinutes(this.value);this.style.setProperty(&quot;--fp-pct&quot;,((Number(this.value)-30)/90*100)+&quot;%&quot;)" onchange="Fit.setMinutes(this.value)"')
+# Native background signals honor the same pre-alert setting.
+change('bridge.scheduleTimer(deadline,label,state.settings.alert)',
+       'bridge.scheduleTimer(deadline,label,state.settings.alert,!!state.settings.preAlert)')
 # Functional voice/time signal sound with a short five-second pre-cue and clear end.
 change('const tones=finalAlarm?[{at:0,d:.20,f:980},{at:.25,d:.20,f:1180},{at:.51,d:.36,f:1380}]:',
  'const tones=finalAlarm?[{at:0,d:.12,f:880},{at:.20,d:.12,f:880},{at:.40,d:.12,f:880},{at:.60,d:.68,f:660}]:')
