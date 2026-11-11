@@ -12,6 +12,8 @@ on:
       - "fitplan/stabilize_v1911.py"
       - "fitplan/precision-engine-v7.js"
       - "fitplan/apply_v7.py"
+      - "fitplan/apply_v75.py"
+      - "fitplan/precision-engine-v75.js"
       - "fitplan/test-v7.cjs"
   workflow_dispatch:
   schedule:
@@ -109,6 +111,23 @@ jobs:
           assert "catch(error){console.warn('V7 fallback to V4',error)" in j
           assert "if(s.v7){const v=s.v7;s.v7={changes:" in j
           print('V7.4 production bundle checks passed')
+          PY
+      - name: Integrate V7.5 adaptive feedback and FitPlan icon
+        if: steps.existing.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet Pillow
+          python fitplan/apply_v75.py
+          node --check fitplan/native/app/src/main/assets/precision-engine-v75.js
+          node --check fitplan/native/app/src/main/assets/app.js
+          python - <<'PY'
+          from pathlib import Path
+          b=Path('fitplan/native/app/src/main/assets')
+          h=(b/'index.html').read_text()
+          assert h.index('precision-engine-v7.js') < h.index('precision-engine-v75.js') < h.index('app.js')
+          assert 'FitPlanPrecisionV75?.planDay(plannerInput)' in (b/'app.js').read_text()
+          assert Path('fitplan/native/app/src/main/res/drawable/fitplan_icon.png').is_file()
+          print('V7.5 native integration checks passed')
           PY
       - name: Set native version from version.json
         if: steps.existing.outputs.skip != 'true'
