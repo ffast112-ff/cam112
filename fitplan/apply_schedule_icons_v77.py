@@ -73,7 +73,7 @@ function syncWidget(){
 """
 # Revert escapes used when embedding JavaScript single-quote in HTML onclick
 insert=insert.replace("\\\\'","\\'")
-s=s.replace('function nav(){',insert+'\\nfunction nav(){',1)
+s=s.replace('function nav(){',insert+chr(10)+'function nav(){',1)
 change(" nativeSync();\n}", " nativeSync();syncWidget();\n}")
 change("else if(view==='history')page=historyView();","else if(view==='history')page=historyView();else if(view==='schedule')page=scheduleView();")
 change("window.Fit={quickLastRir,","window.Fit={moveCalendar,selectCalendar,todayCalendar,markCalendar,quickLastRir,")
