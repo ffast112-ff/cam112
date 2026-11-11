@@ -87,14 +87,14 @@ function scheduleView(){
    const sets=(it.sets||[]).filter(z=>z.done&&!z.warmup&&z.role!=='warmup');
    if(!sets.length)return '';
    const e=exercise(it.currentId||it.eid||it.id),w=Math.max(0,...sets.map(x=>num(x.actualWeight)));
-   return '<div class="fp-v76-row"><span>'+esc(e?.n||'운동')+
+   return '<div class="fp-v76-row"><span>'+fpIcon('check','tiny-art')+esc(e?.n||'운동')+
     '</span><strong>'+sets.length+'세트'+(w>0?' · '+formatWeight(w)+'kg':'')+'</strong></div>';
   }).filter(Boolean).join('');
   return '<div class="subhead"><strong>'+esc(h.splitName||'완료한 운동')+'</strong>'+items+'</div>';
  }).join('');
  const expected=preview?'<div class="subhead"><strong>'+esc(preview.name)+
    '</strong><p class="fp-v76-muted">예상 종목입니다. 실제 종목·중량·세트는 운동 당일 재계산합니다.</p>'+
-   preview.exercises.map(x=>'<div class="fp-v76-row"><span>'+esc(x)+'</span></div>').join('')+'</div>':
+   preview.exercises.map(x=>'<div class="fp-v76-row"><span>'+fpIcon('target','tiny-art')+esc(x)+'</span></div>').join('')+'</div>':
    '<p class="fp-v76-muted">아직 구체적인 종목이 확정되지 않았습니다. 운동 가능일을 지정하면 계획을 재계산합니다.</p>';
  const controls=status==='done'?'':'<div class="fp-calendar-actions"><button class="btn secondary" onclick="Fit.markCalendar(&quot;planned&quot;)">운동 예정</button>'+
   '<button class="btn secondary" onclick="Fit.markCalendar(&quot;rest&quot;)">휴식</button>'+
