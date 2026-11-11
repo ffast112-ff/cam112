@@ -62,7 +62,7 @@ write('precision-engine-v5.js',s)
 # V7: intensity based volume, no subjective readiness or derived fatigue/recovery scores.
 s=read('precision-engine-v7.js')
 s=s.replace('groups={},muscles={},fatigue=blank();','groups={},muscles={};')
-s=s.replace('recoveryDays:2.5,\n    recoveryConfidence:0,highFatigue:false,','')
+s=reg(s,r'recoveryDays:2\.5,\s*recoveryConfidence:0,highFatigue:false,','')
 s=reg(s,r'\s*if\(row\.t>=now-10\*DAY\)\{const age=.*?fatigue\[m\]\+=.*?;\}','')
 s=reg(s,r'\s*const v=muscles\[m\],history=\[\];.*?v\.recoveryConfidence=rnd\(clamp\(\(history\.length-4\)/12,0,\.8\)\);','\n   const v=muscles[m];')
 s=reg(s,r'\s*const recent=rows\.filter\(z=>z\.t>=now-14\*DAY\).*?v\.fatigue=rnd\(fatigue\[m\]\);','')
