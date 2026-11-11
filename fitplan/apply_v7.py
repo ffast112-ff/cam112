@@ -44,14 +44,14 @@ add='''function v7StateInsights(){
 }
 '''
 s=s.replace(needle,add+needle,1)
-needle='window.Fit={githubRepo:'
+needle='window.Fit={'
 assert needle in s
 s=s.replace(needle,'''function trainingWeekday(day){
  let days=Array.isArray(state.settings.trainingWeekdays)?state.settings.trainingWeekdays.slice():[];
  if(day<0)days=[];else days=days.includes(day)?days.filter(x=>x!==day):[...days,day].sort();
  state.settings.trainingWeekdays=days;save();render();
 }
-window.Fit={trainingWeekday,githubRepo:''',1)
+window.Fit={trainingWeekday,''',1)
 needle='precision:()=>FitPlanPrecisionV4,precisionV5:'
 assert needle in s;s=s.replace(needle,'precision:()=>FitPlanPrecisionV7,precisionV4:()=>FitPlanPrecisionV4,precisionV5:',1)
 p.write_text(s,encoding='utf8')
