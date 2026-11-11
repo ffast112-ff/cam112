@@ -17,6 +17,8 @@ on:
       - "fitplan/neon-v76.css"
       - "fitplan/apply_ui_v76.py"
       - "fitplan/apply_native_update.py"
+      - "fitplan/apply_schedule_icons_v77.py"
+      - "fitplan/icons-v77.svg"
       - "fitplan/test-v7.cjs"
   workflow_dispatch:
   schedule:
@@ -137,6 +139,7 @@ jobs:
         run: |
           python fitplan/apply_ui_v76.py
           python fitplan/apply_native_update.py
+          python fitplan/apply_schedule_icons_v77.py
           node --check fitplan/native/app/src/main/assets/app.js
       - name: Set native version from version.json
         if: steps.existing.outputs.skip != 'true'
