@@ -42,6 +42,18 @@ public final class MainActivity extends Activity {
             }
         }
         @JavascriptInterface public void cancelTimer(){TimerAlarmReceiver.cancel(MainActivity.this);}
+        @JavascriptInterface public void syncSchedule(String json){
+            if(json==null||json.length()>1000000)return;
+            try{
+                org.json.JSONObject data=new org.json.JSONObject(json);
+                String canonical=data.toString();
+                android.content.SharedPreferences prefs=getSharedPreferences("fitplan_widget",MODE_PRIVATE);
+                if(!canonical.equals(prefs.getString("schedule",""))){
+                    prefs.edit().putString("schedule",canonical).apply();
+                    runOnUiThread(()->FitPlanCalendarWidget.refresh(MainActivity.this));
+                }
+            }catch(Throwable error){Log.w(TAG,"Widget schedule rejected",error);}
+        }
         @JavascriptInterface public void downloadUpdate(String url){
             if(updater!=null)updater.begin(url);
         }
@@ -95,6 +107,10 @@ public final class MainActivity extends Activity {
             webView.setWebViewClient(new WebViewClient() {
                 @Override public void onPageFinished(WebView v, String url) {
                     Log.i(TAG,"Page finished: " + url);
+                    if(getIntent()!=null&&getIntent().getBooleanExtra("open_schedule",false)){
+                        getIntent().removeExtra("open_schedule");
+                        v.evaluateJavascript("if(window.Fit&&Fit.go)Fit.go('schedule');",null);
+                    }
                 }
                 @Override public void onReceivedError(WebView v, WebResourceRequest req, WebResourceError error) {
                     if (req.isForMainFrame()) {
@@ -114,6 +130,13 @@ public final class MainActivity extends Activity {
             label.setTextSize(16);
             label.setPadding(32,48,32,32);
             root.addView(label);
+        }
+    }
+    @Override protected void onNewIntent(android.content.Intent intent){
+        super.onNewIntent(intent);setIntent(intent);
+        if(intent.getBooleanExtra("open_schedule",false)&&webView!=null){
+            intent.removeExtra("open_schedule");
+            webView.evaluateJavascript("if(window.Fit&&Fit.go)Fit.go('schedule');",null);
         }
     }
     @Override protected void onResume(){super.onResume();visible=true;if(updater!=null)updater.onResume();}
