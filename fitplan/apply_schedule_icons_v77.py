@@ -74,8 +74,7 @@ function syncWidget(){
 # Revert escapes used when embedding JavaScript single-quote in HTML onclick
 insert=insert.replace("\\\\'","\\'")
 s=s.replace('function nav(){',insert+'\\nfunction nav(){',1)
-change("function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('Cannot save',e)}}",
-       "function save(){try{localStorage.setItem(KEY,JSON.stringify(state));syncWidget();}catch(e){console.warn('Cannot save',e)}}")
+change(" nativeSync();\n}", " nativeSync();syncWidget();\n}")
 change("else if(view==='history')page=historyView();","else if(view==='history')page=historyView();else if(view==='schedule')page=scheduleView();")
 change("window.Fit={quickLastRir,","window.Fit={moveCalendar,selectCalendar,todayCalendar,markCalendar,quickLastRir,")
 change('<span class="barbell-logo">━●━</span>','<span class="barbell-logo">'+D+'{fpIcon("work")}</span>')
