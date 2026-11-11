@@ -87,6 +87,31 @@ const legend=win.document.querySelector('.fp-calendar-legend');
 assert(legend,'Calendar should retain status legend');
 console.log('PASS V8: four tabs, single home action, prior-screen back, slider sync, fixed calendar actions');
 
+// V8.1: onboarding alignment is scoped, Settings has a single weekday source,
+// and calendar exercise names are actionable without altering training records.
+win.Fit.go('setup');
+assert(win.document.querySelector('.choices .choice'), 'Goal/physique choice cards missing');
+assert(win.document.querySelectorAll('.field .chip').length>=6,'Focus chips missing');
+win.Fit.go('settings');
+const settingsText=win.document.querySelector('#app').textContent;
+assert(!settingsText.includes('V7 적응형 훈련 일정'),'Duplicate weekday configuration remains in settings');
+assert(!settingsText.includes('한국어 음성 안내'),'Removed voice coach still shown');
+assert(!settingsText.includes('헬스장 기구 기록'),'Removed equipment registry still shown');
+assert(!settingsText.includes('사진 촬영·기구 선택 안내'),'Experimental machine-camera entry still shown');
+win.Fit.go('schedule');
+assert(!win.document.querySelector('#app').textContent.includes('홈 화면 위젯'),'Widget instructions must not occupy schedule');
+const days=[...win.document.querySelectorAll('button[onclick*="Fit.trainingWeekday("]')];
+assert.equal(days.length,8,'Seven weekday chips and one automatic reset must remain in schedule');
+win.Fit.selectCalendar('2026-11-13');
+const exerciseLink=win.document.querySelector('.fp-v81-exercise');
+if(exerciseLink){
+ assert(exerciseLink.getAttribute('onclick').includes('Fit.guideByName'),'Calendar exercise must open detailed guide');
+ exerciseLink.click();
+ assert(win.document.querySelector('.modal'),'Exercise explanation modal must be accessible');
+ win.Fit.closeModal();
+}
+console.log('PASS V8.1 setup, weekday layout, streamlined settings and workout details');
+
 assert(!errors.some(x=>/FitPlan render error|Uncaught/i.test(x)),errors.join('\n'));
 const css=fs.readFileSync(path.join(assets,'style.css'),'utf8');
 assert(!css.includes('}\\n.fp-art'),'CSS contains escaped newline');
