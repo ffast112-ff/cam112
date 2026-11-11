@@ -54,6 +54,7 @@ public final class FitPlanCalendarWidget extends AppWidgetProvider {
         try{data=new JSONObject(prefs.getString("schedule","{}"));}catch(Exception e){data=new JSONObject();}
         Set<String> done=new HashSet<>(),weekdays=new HashSet<>(),plannedDates=new HashSet<>();
         JSONObject override=data.optJSONObject("overrides");
+        JSONObject plannedWorkouts=data.optJSONObject("plannedWorkouts");
         JSONArray dates=data.optJSONArray("done"),chosen=data.optJSONArray("weekdays"),projected=data.optJSONArray("plannedDates");
         if(dates!=null)for(int i=0;i<dates.length();i++)done.add(dates.optString(i));
         if(chosen!=null)for(int i=0;i<chosen.length();i++)weekdays.add(String.valueOf(chosen.optInt(i)));
@@ -76,7 +77,8 @@ public final class FitPlanCalendarWidget extends AppWidgetProvider {
             int wk=day.get(Calendar.DAY_OF_WEEK)-1;
             String overrideValue=override==null?"":override.optString(key,"");
             if(!done.contains(key)&&("planned".equals(overrideValue)||(!"rest".equals(overrideValue)&&plannedDates.contains(key)))){
-                next=(day.get(Calendar.MONTH)+1)+"/"+day.get(Calendar.DAY_OF_MONTH)+" 운동 예정";break;
+                String workoutName=plannedWorkouts==null?"운동 예정":plannedWorkouts.optString(key,"운동 예정");
+                next=(day.get(Calendar.MONTH)+1)+"/"+day.get(Calendar.DAY_OF_MONTH)+" "+workoutName;break;
             }
             day.add(Calendar.DAY_OF_MONTH,1);
         }
