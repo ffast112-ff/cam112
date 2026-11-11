@@ -23,6 +23,7 @@ s=s.replace('if(z.stalled&&z.recoveryAdequate)x*=1.08;', 'if(z.stalled&&z.sample
 s=s.replace('highFatigue:false,','').replace('recoveryAdequate:false,','')
 s=s.replace("soreness:numFeedback(h.session,'soreness'),",'')
 s=reg(s,r'\s*const recent=rows\.slice\(-3\),pain=recent\.some\(x=>x\.pain\),fatigue=.*?b\.recoveryAdequate=.*?;','')
+s=s.replace('const risk=response[e.m]?.highFatigue?-5:0;', 'const risk=0;')
 s=s.replace('if(response[e.m]?.highFatigue||analysis.setsAdjustment<0)return 2;',
             'if(analysis.setsAdjustment<0)return 2;')
 s=s.replace('회복 상태와 자세를 다시 확인합니다.','반복 수행과 자세를 다시 확인합니다.')
