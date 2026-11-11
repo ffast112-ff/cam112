@@ -112,6 +112,22 @@ if(exerciseLink){
 }
 console.log('PASS V8.1 setup, weekday layout, streamlined settings and workout details');
 
+
+win.Fit.go('ready');
+const v82Range=win.document.querySelector('input[type="range"][min="30"][max="120"]');
+assert(v82Range,'Time range missing');
+assert(typeof win.fpSyncTimeThumb==='function','Thumb alignment routine missing');
+win.fpSyncTimeThumb();
+assert(v82Range.style.getPropertyValue('--fp-thumb-fill'),'Pixel-correct range endpoint not calculated');
+const appJS=fs.readFileSync(path.join(assets,'app.js'),'utf8');
+assert(appJS.includes('const targetLabel=targetNumber>0?'),'Safe target label missing');
+assert(appJS.includes('esc(targetLabel)'),'Target display is not protected from undefined');
+const playerStyle=fs.readFileSync(path.join(assets,'style.css'),'utf8');
+assert(playerStyle.includes('.player-page:has(.streamlined-player) .mint-ring'),'Compact player styles missing');
+assert(playerStyle.includes('overflow:hidden'),'Player viewport clipping policy missing');
+assert(playerStyle.includes('.player-page .player-close'),'Header icon centering missing');
+console.log('PASS V8.2 time slider, safe target labels, compact player and centered buttons');
+
 assert(!errors.some(x=>/FitPlan render error|Uncaught/i.test(x)),errors.join('\n'));
 const css=fs.readFileSync(path.join(assets,'style.css'),'utf8');
 assert(!css.includes('}\\n.fp-art'),'CSS contains escaped newline');
