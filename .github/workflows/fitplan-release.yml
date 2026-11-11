@@ -7,6 +7,9 @@ on:
       - "fitplan/source.zip"
       - "fitplan/version.json"
       - "fitplan/patch_android_back.py"
+      - "fitplan/precision_v6_catalog_patch.py"
+      - "fitplan/plate45_calibration_patch.py"
+      - "fitplan/stabilize_v1911.py"
   workflow_dispatch:
   schedule:
     - cron: '17,47 * * * *'
@@ -31,8 +34,10 @@ jobs:
           VERSION=$(python -c "import json;print(json.load(open('fitplan/version.json'))['version'])")
           if gh release view "fitplan-v$VERSION" >/dev/null 2>&1; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-java@v4
         if: steps.existing.outputs.skip != 'true'
@@ -71,6 +76,18 @@ jobs:
           cp fitplan/native/app/src/main/assets/app.js fitplan/app/assets/app.js
           python fitplan/patch_android_back.py
           cp fitplan/app/assets/app.js fitplan/native/app/src/main/assets/app.js
+      - name: Apply full first-load catalog and regression checks
+        if: steps.existing.outputs.skip != 'true'
+        env:
+          FITPLAN_BUILD_VERSION: ${{ steps.existing.outputs.version }}
+        run: |
+          set -euo pipefail
+          python fitplan/stabilize_v1911.py
+          python fitplan/plate45_calibration_patch.py
+          python fitplan/precision_v6_catalog_patch.py
+          node --check fitplan/native/app/src/main/assets/precision-engine-v5.js
+          node --check fitplan/native/app/src/main/assets/app.js
+          node -e "const v=require('./fitplan/native/app/src/main/assets/precision-engine-v5.js');if(Object.keys(v.CATALOG_V6).length!==31)throw Error('Missing exercise standards');"
       - name: Set native version from version.json
         if: steps.existing.outputs.skip != 'true'
         run: |
