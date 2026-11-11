@@ -76,7 +76,10 @@ function scheduleView(){
    '" onclick="Fit.selectCalendar(&quot;'+date+'&quot;)">'+d.getDate()+'</button>';
  }).join('');
  const selected=new Date(fpSelectedDate+'T12:00:00'),status=fpStatus(selected,done,plans),
-  records=fpRecords(fpSelectedDate),preview=status==='planned'?fpPrediction(plans.get(fpSelectedDate)):null;
+  records=fpRecords(fpSelectedDate),preview=status==='planned'?fpPrediction(plans.get(fpSelectedDate)||{
+   sessionIndex:state.sessionIndex+[...plans.keys()].filter(x=>x<fpSelectedDate).length,
+   dayName:splitProgram().days[(state.sessionIndex+[...plans.keys()].filter(x=>x<fpSelectedDate).length)%splitProgram().days.length][0]
+  }):null;
  const stats={done:0,planned:0,rest:0};
  for(let day=1;day<=new Date(year,m+1,0).getDate();day++)stats[fpStatus(new Date(year,m,day),done,plans)]++;
  const completed=records.map(h=>{
@@ -116,7 +119,7 @@ function scheduleView(){
 s=s[:a]+replacement+s[b:]
 old="window.FitPlanNative.syncSchedule(JSON.stringify({done:[...fpDone()],weekdays:fpDays(),overrides:state.settings.scheduleOverrides||{}}))"
 assert old in s
-s=s.replace(old,"window.FitPlanNative.syncSchedule(JSON.stringify({done:[...fpDone()],plannedDates:[...fpProjected().keys()],weekdays:fpDays(),overrides:state.settings.scheduleOverrides||{}}))",1)
+s=s.replace(old,"window.FitPlanNative.syncSchedule(JSON.stringify({done:[...fpDone()],plannedDates:[...fpProjected().keys()],plannedWorkouts:Object.fromEntries([...fpProjected()].map(([d,slot])=>[d,slot.dayName||'운동 예정'])),weekdays:fpDays(),overrides:state.settings.scheduleOverrides||{}}))",1)
 old="state.settings.trainingWeekdays=days;save();render();"
 assert old in s
 s=s.replace(old,"state.settings.trainingWeekdays=days;fpPlanCache=null;save();render();",1)
