@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import shutil
+import shutil, re, json, base64
 p=Path('fitplan/native/app/src/main/assets/app.js');s=p.read_text('utf8')
 base=p.parent
 shutil.copyfile('fitplan/icons-v77.svg',base/'icons-v77.svg')
 D=chr(36)
+# Package every symbol as an independent SVG image. External SVG use references
+# are not reliable under Android WebView's file:// origin.
+sprite=Path('fitplan/icons-v77.svg').read_text('utf8')
+defs=sprite.split('<defs>',1)[1].split('</defs>',1)[0]
+icons={}
+for name,shape in re.findall(r'<symbol id="([^"]+)" viewBox="0 0 64 64">(.*?)</symbol>',sprite,re.S):
+    svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs>'+defs+'</defs>'+shape+'</svg>'
+    icons[name]='data:image/svg+xml;base64,'+base64.b64encode(svg.encode()).decode()
+assert len(icons)>=20, 'Icon extraction failed'
+
 def change(a,b):
  global s
  assert a in s, ('Missing UI anchor',a[:75])
@@ -14,7 +24,8 @@ change("function nav(){const tabs=[['home','⌂','홈'],['work','▰','운동'],
 change('<span aria-hidden="true">'+D+'{ico}</span><small>'+D+'{label}</small>',D+'{fpIcon(ico,"nav-icon")}<small>'+D+'{label}</small>')
 insert="""
 const FP_ICONS=new Set(['home','work','history','analytics','schedule','settings','trend','check','recovery','timer','play','pause','next','back','add','remove','weight','target','rest','notification','finish','edit','clock','calendar_today','heart']);
-function fpIcon(k,cls=''){return '<svg class="fp-art '+cls+'" role="img" aria-label="'+k+'"><use href="icons-v77.svg#'+(FP_ICONS.has(k)?k:'target')+'"></use></svg>';}
+const FP_IMG_DATA=__FITPLAN_ICON_DATA__;
+function fpIcon(k,cls=''){const img=FP_IMG_DATA[FP_ICONS.has(k)?k:'target'];return '<img class="fp-art '+cls+'" draggable="false" alt="" src="'+img+'">';}
 let fpCalendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let fpSelectedDate='';
 function fpDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -30,7 +41,7 @@ function fpDone(){
   if(mainCount(h)<1)continue;
   const t=sessionTime(h),d=t?new Date(t):null;
   if(d&&!isNaN(d.getTime()))set.add(fpDate(d));
-  else if(/^\\\\d{4}-\\\\d{2}-\\\\d{2}$/.test(h.date||''))set.add(h.date);
+  else if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(h.date||''))set.add(h.date);
  }
  return set;
 }
@@ -73,17 +84,15 @@ function syncWidget(){
 """
 # Revert escapes used when embedding JavaScript single-quote in HTML onclick
 insert=insert.replace("\\\\'","\\'")
+insert=insert.replace('__FITPLAN_ICON_DATA__',json.dumps(icons,separators=(',',':')))
 s=s.replace('function nav(){',insert+chr(10)+'function nav(){',1)
 change(" nativeSync();\n}", " nativeSync();syncWidget();\n}")
 change("else if(view==='history')page=historyView();","else if(view==='history')page=historyView();else if(view==='schedule')page=scheduleView();")
 change("window.Fit={quickLastRir,","window.Fit={moveCalendar,selectCalendar,todayCalendar,markCalendar,quickLastRir,")
 change('<span class="barbell-logo">━●━</span>','<span class="barbell-logo">'+D+'{fpIcon("work")}</span>')
 change('aria-label="설정">⚙</button>','aria-label="설정">'+D+'{fpIcon("settings")}</button>')
-# graphical images for small and large decorative UI headings, buttons, and secondary sections
-for mark,k in [('▥','analytics'),('▦','schedule'),('▰','work'),('◷','clock'),('◉','check'),('✓','check'),('▶','play'),('↻','recovery'),('◎','target'),('◴','timer')]:
- for suffix in [' ','<']:
-  s=s.replace('>'+mark+suffix,'>'+D+'{fpIcon("'+k+'")}'+suffix)
-# status icons, title icons, and tool buttons rendered via a unified image atlas
+# Avoid broad text substitutions across concatenated HTML and JavaScript.
+# Image icons in the header and bottom tabs remain; other icons are opt-in.
 p.write_text(s,'utf8')
 css="""
 .fp-art{display:inline-block;width:23px;height:23px;vertical-align:middle;margin-right:5px;filter:drop-shadow(0 0 3px #21ee7080);flex-shrink:0}
@@ -102,5 +111,5 @@ css="""
 .fp-calendar-legend{display:flex;justify-content:space-between;gap:4px;font-size:11px;color:#bbd4c8;margin-top:18px}
 .fp-calendar-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.fp-calendar-actions button{flex:1}
 """
-q=base/'style.css';q.write_text(q.read_text('utf8')+'\\n'+css,'utf8')
+q=base/'style.css';q.write_text(q.read_text('utf8')+chr(10)+css,'utf8')
 print('FitPlan schedule and image icon atlas integrated')
