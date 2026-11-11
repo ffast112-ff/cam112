@@ -21,6 +21,7 @@ on:
       - "fitplan/apply_schedule_detail_v78.py"
       - "fitplan/apply_sequential_schedule_v79.py"
       - "fitplan/apply_compact_ui_v80.py"
+      - "fitplan/apply_ui_fixes_v81.py"
       - "fitplan/apply_launcher_icon_v80.py"
       - "fitplan/generate_chimes_v80.py"
       - "fitplan/schedule-queue-v79.js"
@@ -151,6 +152,7 @@ jobs:
           python fitplan/apply_schedule_detail_v78.py
           python fitplan/apply_sequential_schedule_v79.py
           python fitplan/apply_compact_ui_v80.py
+          python fitplan/apply_ui_fixes_v81.py
           python fitplan/apply_launcher_icon_v80.py
           python fitplan/generate_chimes_v80.py
           node --check fitplan/native/app/src/main/assets/schedule-queue-v79.js
