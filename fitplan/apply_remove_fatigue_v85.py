@@ -117,7 +117,7 @@ s=s.replace('몸의 피로가 충분히 줄었는지 확인하고 진행하세�
 s=s.replace("const cause=pain>0||hard>=Math.max(2,Math.ceil(workouts.length*.4))?'recovery':","const cause=pain>0?'safety':")
 s=s.replace("recovery:'최근 통증이나 높은 피로 기록이 있어 다음 주기는 회복을 우선합니다.'",
             "safety:'최근 통증 기록이 있어 안전 조건을 확인합니다.'")
-for m in re.finditer(r'FitPlanAdvanced\\.excessiveFatigue',s):
+for m in re.finditer('excessiveFatigue',s):
  print('DEBUG-UNREMOVED-FATIGUE-CALL:',repr(s[max(0,m.start()-240):m.end()+350]))
 write('app.js',s)
 # Hard guard: no branches based on fatigue inputs, no rendered soreness/sleep questions.
