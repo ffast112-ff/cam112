@@ -128,7 +128,7 @@ s=replace(s,
 s=replace(s,'   paceFactor:pace.factor,paceSamples:pace.samples,deload:deload.active,\n   deloadReason:deload.reason,',
             '   paceFactor:pace.factor,paceSamples:pace.samples,')
 s=replace(s,
- '''''',
+ chr(36)+"{s.deload?`<div class=\"callout\"><strong>회복·피로 조절 주간</strong><p>"+chr(36)+"{esc(s.deloadReason)}</p></div>`:''}",
  '')
 assert 'FitPlanAdvanced.excessiveFatigue' not in s,'Workout creator still uses removed fatigue scoring'
 assert not re.search(r'\bdeload\b',s),'Orphaned deload references remain'
