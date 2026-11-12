@@ -132,10 +132,10 @@ console.log('PASS V8.2 time slider, safe target labels, compact player and cente
 // Production-critical end-to-end action: buttons must actually start a plan,
 // not merely render HTML.  A no-op is a blocking release regression.
 win.Fit.go('ready');
-console.log('READY BUTTONS:',[...win.document.querySelectorAll('#app button')].map(b=>({text:b.textContent.trim(),onclick:b.getAttribute('onclick')}))); 
-const planBtns=[...win.document.querySelectorAll('#app button')].filter(b=>/운동 계획 생성|루틴 생성|운동 생성|운동 시작/.test(b.textContent));
+
+const planBtns=[...win.document.querySelectorAll('#app button')].filter(b=>/운동 계획 만들기|운동 계획 생성|루틴 생성|운동 생성|운동 시작/.test(b.textContent));
 assert(planBtns.length>0,'No workout generation button in preparation');
-const generateBtn=planBtns.find(b=>/운동 계획 생성|루틴 생성|운동 생성/.test(b.textContent))||planBtns[0];
+const generateBtn=planBtns.find(b=>/운동 계획 만들기|운동 계획 생성|루틴 생성|운동 생성/.test(b.textContent))||planBtns[0];
 const beforeClick=win.FitEngine.state().active;
 try{generateBtn.click();}catch(err){throw Error('Workout creation action threw: '+err.stack);}
 const afterClick=win.FitEngine.state().active;
