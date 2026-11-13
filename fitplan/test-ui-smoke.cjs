@@ -150,6 +150,39 @@ assert(afterClick.v86.lookahead>=2||afterClick.v86.reason,
  'Rolling optimizer did not produce a quality result');
 console.log('PASS critical E2E: workout creation button generated '+afterClick.items.length+' exercises');
 
+const sourceApp=fs.readFileSync(path.join(assets,'app.js'),'utf8');
+for(const term of ['function createPlan(', 'function finishSetup(', 'function completeSetup(', 'function resetProfile(', 'function profileSave(', 'function readyView(', 'function setupView(', '프로필 다시 설정', 'function startWorkout(']){
+ const idx=sourceApp.indexOf(term);
+ if(idx>=0)console.log('PROFILE CODE '+term+' '+sourceApp.slice(Math.max(0,idx-150),idx+2600));
+}
+const profileVariations=[
+ {goal:'hypertrophy',days:2,duration:60,place:'gym',level:3},
+ {goal:'strength',days:2,duration:30,place:'home',level:0},
+ {goal:'fitness',days:5,duration:120,place:'gym',level:1},
+ {goal:'fatloss',days:3,duration:45,place:'home',level:2}
+];
+const signatures=[];
+for(const variation of profileVariations){
+ const state=win.FitEngine.state();
+ state.profile={...state.profile,...variation};
+ state.active=null;
+ state.planMemory=null;
+ state.sessionIndex=0;
+ win.Fit.go('ready');
+ const btn=[...win.document.querySelectorAll('#app button')].find(b=>/운동 계획 만들기|운동 계획 생성/.test(b.textContent));
+ assert(btn,'Missing plan generation button for '+JSON.stringify(variation));
+ btn.click();
+ const active=win.FitEngine.state().active;
+ assert(active?.items?.length>0,'Profile '+JSON.stringify(variation)+' produced no routine');
+ const sig=JSON.stringify({items:active.items.map(x=>({id:x.currentId||x.id,sets:x.sets?.map(z=>[z.targetReps,z.targetRIR,z.targetWeight])})),split:active.splitName,time:active.timeLimit});
+ signatures.push(sig);
+ console.log('PROFILE GENERATION:',JSON.stringify({variation,split:active.splitName,time:active.timeLimit,
+   items:active.items.map(x=>({name:x.currentId||x.id,sets:x.sets?.length,reps:x.sets?.[0]?.targetReps}))}));
+}
+assert(new Set(signatures).size>=3,'Profile changes are not producing distinct exercise plans');
+console.log('PASS profile variants generate distinct plans');
+
+
 assert(!errors.some(x=>/FitPlan render error|Uncaught/i.test(x)),errors.join('\n'));
 const css=fs.readFileSync(path.join(assets,'style.css'),'utf8');
 assert(!css.includes('}\\n.fp-art'),'CSS contains escaped newline');
