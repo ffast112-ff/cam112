@@ -58,7 +58,7 @@ for(const place of venues)for(const level of levels){
    'Primary movements should remain stable');
  }else if(current.v86.changes>0){
   // Future substitutions are not silently saved; they are only forecasts.
-  assert.equal(signature(current),signature(base),'Uncommitted future plan changed today's result');
+  assert.equal(signature(current),signature(base),"Uncommitted future plan changed today\'s result");
  }
  cases++;
  if(current.v86.lookahead>1)positive++;
