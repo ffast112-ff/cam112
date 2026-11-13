@@ -26,6 +26,9 @@ on:
       - "fitplan/apply_quality_v83.py"
       - "fitplan/apply_quality_gate_v83.py"
       - "fitplan/apply_remove_fatigue_v85.py"
+      - "fitplan/precision-engine-v86.js"
+      - "fitplan/apply_rolling_optimizer_v86.py"
+      - "fitplan/test-rolling-v86.cjs"
       - "fitplan/test-no-fatigue-v85.cjs"
       - "fitplan/test-quality-v83.cjs"
       - "fitplan/apply_launcher_icon_v80.py"
@@ -186,10 +189,21 @@ jobs:
           node --check fitplan/native/app/src/main/assets/fitplan-advanced.js
           node --check fitplan/native/app/src/main/assets/fitplan-timer-v6.js
           node fitplan/test-no-fatigue-v85.cjs
+          python fitplan/apply_rolling_optimizer_v86.py
+          node --check fitplan/native/app/src/main/assets/precision-engine-v86.js
+          node --check fitplan/native/app/src/main/assets/app.js
+          node fitplan/test-rolling-v86.cjs
 
           node --check fitplan/native/app/src/main/assets/schedule-queue-v79.js
           node fitplan/test-schedule-queue-v79.cjs
           node --check fitplan/native/app/src/main/assets/app.js
+      - name: Archive rolling-program optimizer quality report
+        if: steps.existing.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitplan-rolling-quality-v86
+          path: fitplan/quality-v86-report.json
+          retention-days: 30
       - name: Render five FitPlan screens and test calendar icons
         if: steps.existing.outputs.skip != 'true'
         run: |
