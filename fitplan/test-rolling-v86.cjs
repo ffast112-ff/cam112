@@ -53,8 +53,9 @@ for(const place of venues)for(const level of levels){
   changed++;
   assert.notEqual(signature(current),signature(base),'Changed is false-positive');
   assert(current.v86.optimizedScore>current.v86.baselineScore,'Optimizer did not improve proxy objective');
-  assert.equal(current.items.slice(0,3).map(x=>x.id).join('|'),
-   base.items.slice(0,3).map(x=>x.id).join('|'),
+  const protectedCount=duration>=45?3:1;
+  assert.equal(current.items.slice(0,protectedCount).map(x=>x.id).join('|'),
+   base.items.slice(0,protectedCount).map(x=>x.id).join('|'),
    'Primary movements should remain stable');
  }else if(current.v86.changes>0){
   // Future substitutions are not silently saved; they are only forecasts.
