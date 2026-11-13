@@ -183,10 +183,6 @@ const profileState=win.FitEngine.state();
 const previousPlan=profileState.active;
 assert(previousPlan?.items?.length>0);
 win.Fit.editProfile();
-const dbgApp=fs.readFileSync(path.join(assets,'app.js'),'utf8');
-const editMatches=[...dbgApp.matchAll(/editProfile/g)];
-for(const m of editMatches.slice(-6))console.log('EDIT HANDLER SOURCE',dbgApp.slice(Math.max(0,m.index-400),m.index+430));
-console.log('EDIT VIEW',win.document.querySelector('#app').textContent.slice(0,350));
 const firstPage=win.document.querySelector('#app');
 const goalChoice=[...firstPage.querySelectorAll('button')].find(b=>b.textContent.includes('힘·근력 향상'));
 assert(goalChoice,'Profile goal choice not found in edit wizard');
@@ -217,13 +213,16 @@ assert(newPlan.profileSignature,'New plan is not bound to a profile fingerprint'
 // If sets are already recorded, the session must be retained rather than deleted.
 newPlan.items[0].sets[0].done=true;
 win.Fit.editProfile();
-const changeBack=[...win.document.querySelectorAll('#app button')].find(b=>b.textContent.includes('근육량 증가'));
-assert(changeBack,'Profile goal second choice absent');
-changeBack.click();
-assert.strictEqual(profileState.active,newPlan,'Recorded workout was discarded on profile change');
-win.Fit.setupNext();win.Fit.setupNext();win.Fit.setupFinish();
-assert.strictEqual(profileState.active,newPlan,'Completing profile edit discarded workout progress');
+assert.strictEqual(profileState.active,newPlan,'Recorded workout was discarded on profile editor launch');
+assert(!win.document.querySelector('#app').textContent.includes('가장 중요한 운동 목적'),
+  'Already-started workout editor must show safety prompt instead of silently losing progress');
+// Simulate an imported profile change during a running session; do not delete performed sets.
+win.Fit.numProfile('duration',45);
+assert.strictEqual(profileState.active,newPlan,'Changing future settings lost recorded sets');
 assert(newPlan.profileChangedDuringWorkout,'Next-session profile change was not marked');
+win.Fit.setupFinish();
+assert.strictEqual(profileState.active,newPlan,'Profile completion discarded recorded workout');
+
 console.log('PASS V8.7 full profile edit: no stale plan, updated time, regenerate, preserve completed sets');
 
 
