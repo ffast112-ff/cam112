@@ -81,6 +81,8 @@ replace("function toggleProfile(k,v){const a=state.profile[k]||[];state.profile[
  fpHandleProfileChange(before);save();render();}""")
 replace("function homeView(){\n const p=state.profile,active=state.active,h=state.history||[];",
         "function homeView(){\n fpEnsureCurrentPlan();\n const p=state.profile,active=state.active,h=state.history||[];")
+replace("editProfile:()=>{if(state.active){toast('진행 중인 운동을 종료한 후 수정하세요');return;}setupPage=0;go('setup');}",
+        "editProfile:()=>{if(state.active&&fpActiveHasProgress(state.active)){toast('수행 기록이 있는 진행 중 운동을 마친 뒤 프로필을 변경하세요');return;}setupPage=0;go('setup');}")
 replace("function createPlan(){if(state.active){go('work');return;}",
         "function createPlan(){fpEnsureCurrentPlan();if(state.active){go('work');return;}")
 replace("state.active=plan;replanRemaining=30;save();go('work');toast('운동 계획이 준비됐어요');}",
