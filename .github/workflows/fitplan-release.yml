@@ -28,6 +28,7 @@ on:
       - "fitplan/apply_remove_fatigue_v85.py"
       - "fitplan/precision-engine-v86.js"
       - "fitplan/apply_rolling_optimizer_v86.py"
+      - "fitplan/apply_profile_sync_v87.py"
       - "fitplan/test-rolling-v86.cjs"
       - "fitplan/test-no-fatigue-v85.cjs"
       - "fitplan/test-quality-v83.cjs"
@@ -190,6 +191,7 @@ jobs:
           node --check fitplan/native/app/src/main/assets/fitplan-timer-v6.js
           node fitplan/test-no-fatigue-v85.cjs
           python fitplan/apply_rolling_optimizer_v86.py
+          python fitplan/apply_profile_sync_v87.py
           node --check fitplan/native/app/src/main/assets/precision-engine-v86.js
           node --check fitplan/native/app/src/main/assets/app.js
           node fitplan/test-rolling-v86.cjs
