@@ -154,7 +154,7 @@ function optimization(input,initial){
   if(!allDonors.some(z=>z.id===it.id))allDonors.push(it);
  }
  const p=input.profile||{},minutes=n(input.minutes,p.duration||60);
- const locked=initial.split==='full'&&minutes>=45?3:minutes<45?1:Math.min(2,initial.items.length);
+ const locked=minutes>=45?Math.min(3,initial.items.length):Math.min(1,initial.items.length);
  const baselineScore=score(plans,input),updated=plans.map(x=>({...x,items:x.items.map(copyItem)}));
  let changes=0,candidates=0;
  // Local search over at most 6 projected sessions and 2 elective positions.
