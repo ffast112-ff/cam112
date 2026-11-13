@@ -155,6 +155,18 @@ for(const term of ['function createPlan(', 'function finishSetup(', 'function co
  const idx=sourceApp.indexOf(term);
  if(idx>=0)console.log('PROFILE CODE '+term+' '+sourceApp.slice(Math.max(0,idx-150),idx+2600));
 }
+
+for(const pattern of [
+ /function editProfile\s*\(/, /function finishSetup\s*\(/,
+ /function setupNext\s*\(/, /function setupDone\s*\(/,
+ /function setProfile\s*\(/,/function numProfile\s*\(/,
+ /function toggleFocus\s*\(/,/function generatePlan\s*\(/,
+ /let todayMinutes\s*=/,/function nextSetup\s*\(/
+]){
+ const match=pattern.exec(sourceApp);
+ if(match)console.log('PROFILE MUTATION '+pattern.source+':'+sourceApp.slice(match.index,match.index+1700));
+}
+
 const profileVariations=[
  {goal:'hypertrophy',days:2,duration:60,place:'gym',level:3},
  {goal:'strength',days:2,duration:30,place:'home',level:0},
