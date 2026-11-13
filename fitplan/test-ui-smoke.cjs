@@ -80,7 +80,9 @@ win.Fit.go('ready');
 const rng=win.document.querySelector('input[type="range"]');
 assert(rng&&rng.style.getPropertyValue('--fp-pct').trim(),'Visible slider percent must follow selected time');
 win.Fit.go('schedule');
-win.Fit.selectCalendar('2026-11-13'); // An uncompleted planned day, not an immutable actual workout.
+const future=new Date(Date.now()+8*86400000);
+const futureDay=[future.getFullYear(),String(future.getMonth()+1).padStart(2,'0'),String(future.getDate()).padStart(2,'0')].join('-');
+win.Fit.selectCalendar(futureDay); // Future date, never the already-completed test session.
 const buttons=win.document.querySelector('.fp-calendar-actions');
 assert(buttons&&buttons.querySelectorAll('button').length===3,'Calendar must keep three actions in fixed row');
 const legend=win.document.querySelector('.fp-calendar-legend');
