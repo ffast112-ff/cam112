@@ -150,24 +150,6 @@ assert(afterClick.v86.lookahead>=2||afterClick.v86.reason,
  'Rolling optimizer did not produce a quality result');
 console.log('PASS critical E2E: workout creation button generated '+afterClick.items.length+' exercises');
 
-const sourceApp=fs.readFileSync(path.join(assets,'app.js'),'utf8');
-for(const term of ['function createPlan(', 'function finishSetup(', 'function completeSetup(', 'function resetProfile(', 'function profileSave(', 'function readyView(', 'function setupView(', '프로필 다시 설정', 'function startWorkout(']){
- const idx=sourceApp.indexOf(term);
- if(idx>=0)console.log('PROFILE CODE '+term+' '+sourceApp.slice(Math.max(0,idx-150),idx+2600));
-}
-
-for(const pattern of [
- /function editProfile\s*\(/, /function finishSetup\s*\(/,
- /function setupNext\s*\(/, /function setupDone\s*\(/,
- /function setProfile\s*\(/,/function numProfile\s*\(/,
- /function toggleFocus\s*\(/,/function generatePlan\s*\(/,
- /let todayMinutes\s*=/,/function nextSetup\s*\(/
-]){
- const match=pattern.exec(sourceApp);
- if(match)console.log('PROFILE MUTATION '+pattern.source+':'+sourceApp.slice(match.index,match.index+1700));
-}
-
-console.log('FIT ACTION KEYS',Object.keys(win.Fit).filter(x=>/profile|setup|next|finish|start|create|reset/i.test(x)).join(','));
 const profileVariations=[
  {goal:'hypertrophy',days:2,duration:60,place:'gym',level:3},
  {goal:'strength',days:2,duration:30,place:'home',level:0},
@@ -181,6 +163,7 @@ for(const variation of profileVariations){
  state.active=null;
  state.planMemory=null;
  state.sessionIndex=0;
+ win.Fit.numProfile('duration',variation.duration);
  win.Fit.go('ready');
  const btn=[...win.document.querySelectorAll('#app button')].find(b=>/운동 계획 만들기|운동 계획 생성/.test(b.textContent));
  assert(btn,'Missing plan generation button for '+JSON.stringify(variation));
@@ -194,7 +177,51 @@ for(const variation of profileVariations){
 }
 assert(new Set(signatures).size>=3,'Profile changes are not producing distinct exercise plans');
 console.log('PASS profile variants generate distinct plans');
-assert.fail('DEBUG GATE: inspect profile save / active reset before releasing 1.9.27');
+
+// V8.7 actual profile editor flow: changing an unstarted plan must invalidate it.
+const profileState=win.FitEngine.state();
+const previousPlan=profileState.active;
+assert(previousPlan?.items?.length>0);
+win.Fit.editProfile();
+const firstPage=win.document.querySelector('#app');
+const goalChoice=[...firstPage.querySelectorAll('button')].find(b=>b.textContent.includes('힘·근력 향상'));
+assert(goalChoice,'Profile goal choice not found in edit wizard');
+goalChoice.click();
+assert.equal(profileState.profile.goal,'strength','Goal tap did not persist to profile');
+assert.equal(profileState.active,null,'Changed profile reused an unstarted plan');
+win.Fit.setupNext();
+win.Fit.numProfile('days',2);
+win.Fit.numProfile('duration',120);
+const homeChoice=[...win.document.querySelectorAll('button')].find(b=>b.textContent.trim()==='헬스장');
+assert(homeChoice,'Venue selector not present');
+homeChoice.click();
+win.Fit.setupNext();
+win.Fit.setupFinish();
+assert.equal(profileState.profile.duration,120,'Profile completion reverted duration');
+win.Fit.go('ready');
+const newRange=win.document.querySelector('input[type="range"][min="30"][max="120"]');
+assert.equal(Number(newRange?.value),120,'Today training time did not follow edited profile');
+const updatedButton=[...win.document.querySelectorAll('#app button')].find(b=>b.textContent.includes('운동 계획 만들기'));
+assert(updatedButton,'Workout generation action missing after profile edit');
+updatedButton.click();
+const newPlan=profileState.active;
+assert(newPlan?.items?.length>0,'New profile produced no workout');
+assert.equal(newPlan.timeLimit,120,'New plan retained old workout duration');
+assert.notDeepEqual(newPlan.items.map(x=>x.currentId||x.id),
+ previousPlan.items.map(x=>x.currentId||x.id),'New program exercises were not recalculated for profile');
+assert(newPlan.profileSignature,'New plan is not bound to a profile fingerprint');
+// If sets are already recorded, the session must be retained rather than deleted.
+newPlan.items[0].sets[0].done=true;
+win.Fit.editProfile();
+const changeBack=[...win.document.querySelectorAll('#app button')].find(b=>b.textContent.includes('근육량 증가'));
+assert(changeBack,'Profile goal second choice absent');
+changeBack.click();
+assert.strictEqual(profileState.active,newPlan,'Recorded workout was discarded on profile change');
+win.Fit.setupNext();win.Fit.setupNext();win.Fit.setupFinish();
+assert.strictEqual(profileState.active,newPlan,'Completing profile edit discarded workout progress');
+assert(newPlan.profileChangedDuringWorkout,'Next-session profile change was not marked');
+console.log('PASS V8.7 full profile edit: no stale plan, updated time, regenerate, preserve completed sets');
+
 
 
 assert(!errors.some(x=>/FitPlan render error|Uncaught/i.test(x)),errors.join('\n'));
