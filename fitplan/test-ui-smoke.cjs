@@ -142,6 +142,10 @@ const afterClick=win.FitEngine.state().active;
 assert(afterClick&&afterClick.items&&afterClick.items.length>0,
  'Workout generation was no-op; button='+generateBtn.textContent+
  '; before='+Boolean(beforeClick)+'; errors='+errors.join(' | '));
+assert(afterClick.v86&&afterClick.v86.schema==='rolling-v86',
+ 'Real workout button did not run the new multi-session optimizer');
+assert(afterClick.v86.lookahead>=2||afterClick.v86.reason,
+ 'Rolling optimizer did not produce a quality result');
 console.log('PASS critical E2E: workout creation button generated '+afterClick.items.length+' exercises');
 
 assert(!errors.some(x=>/FitPlan render error|Uncaught/i.test(x)),errors.join('\n'));
