@@ -167,6 +167,7 @@ for(const pattern of [
  if(match)console.log('PROFILE MUTATION '+pattern.source+':'+sourceApp.slice(match.index,match.index+1700));
 }
 
+console.log('FIT ACTION KEYS',Object.keys(win.Fit).filter(x=>/profile|setup|next|finish|start|create|reset/i.test(x)).join(','));
 const profileVariations=[
  {goal:'hypertrophy',days:2,duration:60,place:'gym',level:3},
  {goal:'strength',days:2,duration:30,place:'home',level:0},
@@ -193,6 +194,7 @@ for(const variation of profileVariations){
 }
 assert(new Set(signatures).size>=3,'Profile changes are not producing distinct exercise plans');
 console.log('PASS profile variants generate distinct plans');
+assert.fail('DEBUG GATE: inspect profile save / active reset before releasing 1.9.27');
 
 
 assert(!errors.some(x=>/FitPlan render error|Uncaught/i.test(x)),errors.join('\n'));
