@@ -130,7 +130,13 @@ function block(input,base){
 }
 function criticalPatterns(it,input){
  const p=input.profile||{};
- if(p.days>2||n(input.minutes,p.duration||60)<45)return true;
+ if(n(input.minutes,p.duration||60)<45){
+  if(it.length<2)return true;
+  const lower=it.some(x=>['squat','hinge','glutes'].includes(x.pattern));
+  const upper=it.some(x=>['push','pullvertical','pullhorizontal','verticalpush'].includes(x.pattern));
+  return lower&&upper;
+ }
+ if(p.days>2)return true;
  const patterns=new Set(it.map(x=>x.pattern));
  return patterns.has('push')&&
   (patterns.has('pullvertical')||patterns.has('pullhorizontal'))&&
@@ -148,14 +154,16 @@ function optimization(input,initial){
   if(!allDonors.some(z=>z.id===it.id))allDonors.push(it);
  }
  const p=input.profile||{},minutes=n(input.minutes,p.duration||60);
- const locked=initial.split==='full'&&minutes>=45?3:Math.min(2,initial.items.length);
+ const locked=initial.split==='full'&&minutes>=45?3:minutes<45?1:Math.min(2,initial.items.length);
  const baselineScore=score(plans,input),updated=plans.map(x=>({...x,items:x.items.map(copyItem)}));
  let changes=0,candidates=0;
  // Local search over at most 6 projected sessions and 2 elective positions.
  // Keep the first lower/push/pull anchors and exact split-day sequence.
  for(let pass=0;pass<2;pass++){
   let best=null,bestGain=.05;
-  for(let i=0;i<updated.length;i++){
+  // Only today's decisions are committed. Future sessions are a scoring forecast,
+  // never silently changed or persisted ahead of time.
+  for(let i=0;i<1;i++){
    const cur=updated[i],limit=i===0?locked:cur.split==='full'&&minutes>=45?3:Math.min(2,cur.items.length);
    for(let pos=limit;pos<cur.items.length;pos++){
     const old=cur.items[pos];
@@ -205,7 +213,14 @@ function optimization(input,initial){
 }
 function planDay(input={}){
  const baseline=V75.planDay(input);
- const result=optimization(input,baseline);
+ let result;
+ try{result=optimization(input,baseline);}
+ catch(error){
+  // A planning heuristic must never prevent starting the workout.
+  if(typeof console!=='undefined')console.warn('V8.6 optimizer fallback',error);
+  result={today:baseline,changed:false,changes:0,candidates:0,lookahead:0,
+   reason:'최적화 검사가 실패해 정상적인 기본 처방을 사용합니다'};
+ }
  // Require a strict positive score gain, never change a blocked or infeasible plan.
  const today=result.today;
  const safe= result.changed&&V75.evaluate(input,today).ok &&
